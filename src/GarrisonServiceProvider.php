@@ -9,10 +9,15 @@ use ErnestDefoe\Garrison\Api\Controller\AdminController;
 use ErnestDefoe\Garrison\Api\Controller\ConsoleController;
 use ErnestDefoe\Garrison\Game\Artwork;
 use ErnestDefoe\Garrison\Health\Ladder;
+use ErnestDefoe\Garrison\Notification\Alerts;
+use ErnestDefoe\Garrison\Notification\Webhooks;
 use Flarum\Foundation\AbstractServiceProvider;
 use Flarum\Locale\TranslatorInterface;
 use Illuminate\Contracts\Filesystem\Factory;
+use Flarum\Notification\NotificationSyncer;
+use Flarum\Settings\SettingsRepositoryInterface;
 use Illuminate\Database\ConnectionInterface;
+use Psr\Log\LoggerInterface;
 
 /**
  * 🚨 Every collaborator is REQUIRED, never optional.
@@ -41,8 +46,26 @@ class GarrisonServiceProvider extends AbstractServiceProvider
             return new Dispatcher($container->make(TranslatorInterface::class));
         });
 
+        $this->container->singleton(Webhooks::class, function ($container) {
+            return new Webhooks(
+                $container->make(SettingsRepositoryInterface::class),
+                $container->make(LoggerInterface::class)
+            );
+        });
+
+        $this->container->singleton(Alerts::class, function ($container) {
+            return new Alerts(
+                $container->make(NotificationSyncer::class),
+                $container->make(LoggerInterface::class),
+                $container->make(Webhooks::class)
+            );
+        });
+
         $this->container->singleton(Ladder::class, function ($container) {
-            return new Ladder($container->make(Dispatcher::class));
+            return new Ladder(
+                $container->make(Dispatcher::class),
+                $container->make(Alerts::class)
+            );
         });
 
         $this->container->singleton(ConsoleController::class, function ($container) {

@@ -3,6 +3,8 @@ import { extend } from 'flarum/common/extend';
 
 import LinkButton from 'flarum/common/components/LinkButton';
 
+import { GarrisonServer } from './models';
+import ServerIncidentNotification from './components/ServerIncidentNotification';
 import ServerList from './components/ServerList';
 import ServersPage from './components/ServersPage';
 import registerWidgetHosts from './hosts';
@@ -13,6 +15,37 @@ import registerWidgetHosts from './hosts';
  */
 app.initializers.add('ernestdefoe-garrison', () => {
   app.routes.garrison = { path: '/garrison', component: ServersPage };
+
+  /*
+   * 🚨 Without this, the notification list throws `this.models[...] is not a
+   * constructor` and dies — taking every other extension's notifications with
+   * it. See models.js.
+   */
+  app.store.models['garrison-servers'] = GarrisonServer;
+
+  /*
+   * 🚨 Keyed by the blueprint's getType(). A typo here is silent: the row
+   * renders empty, the unread badge still counts it, and nothing logs.
+   */
+  app.notificationComponents.garrisonServerIncident = ServerIncidentNotification;
+
+  /*
+   * 🚨 And the row in the user's own notification preferences.
+   *
+   * Registering the component makes the alert RENDER; this makes it
+   * CONTROLLABLE. Without it the preference still exists — the extender
+   * registered its default — but there is no checkbox anywhere that reads or
+   * writes it, so somebody being paged about a server they don't run has no
+   * way to stop it except asking an admin to remove their permission. A
+   * setting with no control is the same failure as a control with no setting.
+   */
+  extend('flarum/forum/components/NotificationGrid', 'notificationTypes', function (items) {
+    items.add('garrisonServerIncident', {
+      name: 'garrisonServerIncident',
+      icon: 'fas fa-triangle-exclamation',
+      label: app.translator.trans('ernestdefoe-garrison.forum.settings.notify_garrisonServerIncident_label'),
+    });
+  });
 
   registerWidgetHosts(app, () => <ServerList />);
 

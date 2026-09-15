@@ -6,6 +6,7 @@ use Carbon\Carbon;
 use ErnestDefoe\Garrison\Agent\Dispatcher;
 use ErnestDefoe\Garrison\Model\Incident;
 use ErnestDefoe\Garrison\Model\Server;
+use ErnestDefoe\Garrison\Notification\Alerts;
 use Flarum\User\User;
 
 /**
@@ -44,7 +45,8 @@ class Ladder
     public const FLAP_WINDOW_SECONDS = 600;
 
     public function __construct(
-        protected Dispatcher $dispatcher
+        protected Dispatcher $dispatcher,
+        protected Alerts $alerts
     ) {
     }
 
@@ -135,6 +137,12 @@ class Ladder
             $incident->appendAction('recovered — health is ' . $server->health_state);
             $incident->save();
 
+            // 🚨 Told about the recovery as well as the fault. An alert that
+            // only ever says "it broke" trains people to ignore it, because
+            // they have no way to know from the alerts alone whether anything
+            // is currently wrong.
+            $this->alerts->serverIncident($server, 'recovered');
+
             return 'resolved incident ' . $incident->id;
         }
 
@@ -186,6 +194,10 @@ class Ladder
             ));
             $incident->save();
 
+            // The one alert that must not be missed: automatic recovery has
+            // stopped, and nothing else will happen until somebody acts.
+            $this->alerts->serverIncident($server, 'abandoned', $server->health_summary);
+
             return 'abandoned incident ' . $incident->id;
         }
 
@@ -212,6 +224,16 @@ class Ladder
         if ($incident !== null) {
             return $incident;
         }
+
+        // 🚨 Alerted when the incident OPENS, not when the ladder gives up.
+        // By the time it has given up the server has been unreachable for
+        // several minutes; the point of telling somebody is that they might
+        // get there first.
+        $this->alerts->serverIncident(
+            $server,
+            $server->health_state === 'down' ? 'down' : 'unready',
+            $server->health_summary
+        );
 
         $incident = new Incident();
         $incident->server_id = $server->id;

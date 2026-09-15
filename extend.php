@@ -9,10 +9,12 @@ use ErnestDefoe\Garrison\Api\Controller\AgentPollController;
 use ErnestDefoe\Garrison\Api\Controller\ConsoleController;
 use ErnestDefoe\Garrison\Api\Controller\ListServersController;
 use ErnestDefoe\Garrison\Api\Controller\QueueCommandController;
+use ErnestDefoe\Garrison\Api\Resource\ServerResource;
 use ErnestDefoe\Garrison\Console\BackupCommand;
 use ErnestDefoe\Garrison\Console\HealthCommand;
 use ErnestDefoe\Garrison\Console\PairCommand;
 use ErnestDefoe\Garrison\GarrisonServiceProvider;
+use ErnestDefoe\Garrison\Notification\ServerIncidentBlueprint;
 use Flarum\Extend;
 
 $extenders = [
@@ -113,6 +115,53 @@ $extenders = [
      * undone by configuration.
      */
     (new Extend\Policy()),
+
+    /*
+     * 🚨 REGISTERED SO THAT NOTIFICATIONS CAN SERIALIZE — not so that anybody
+     * can fetch a server through it (it declares no endpoints).
+     *
+     * Flarum builds the notifications endpoint's `subject` relationship over
+     * every blueprint's subject model, and a model with no registered resource
+     * contributes a NULL to that list. The null is inert until something
+     * resolves the relationship, and then /api/notifications 500s — for every
+     * user on the forum, not just Garrison's. See ServerResource's docblock;
+     * this same bug shipped once already in another extension.
+     */
+    (new Extend\ApiResource(ServerResource::class)),
+
+    /*
+     * 🚨 The email templates live under a NAMESPACE, and the blueprint names
+     * that namespace in getEmailViews(). A missing View extender is a "view
+     * not found" thrown inside the queued mail job — which surfaces as a
+     * failed job in a queue nobody is watching, and as an alert that simply
+     * never arrives.
+     */
+    (new Extend\View())
+        ->namespace('ernestdefoe-garrison', __DIR__ . '/views'),
+
+    /*
+     * 🚨 The blueprint must ALSO implement AlertableInterface and
+     * MailableInterface, which this extender cannot enforce. Without the
+     * first, Flarum's alert driver registers no preference default,
+     * NotificationSyncer filters out every recipient, and nothing is ever
+     * delivered — silently. Without the second, the email column in a user's
+     * notification preferences is disabled and this list is a lie.
+     *
+     * 🚨 BOTH DRIVERS ON BY DEFAULT, deliberately.
+     *
+     * The tempting default is alert-only, on the grounds that email is
+     * intrusive. But this notification goes to people who hold
+     * `garrison.manage` — staff who asked to be responsible for these servers
+     * — and the entire argument for the product is the gap between a server
+     * breaking and somebody noticing. An alert that waits in a dropdown until
+     * the next time somebody opens the forum reproduces exactly the failure
+     * being fixed. Anybody who disagrees has a checkbox.
+     */
+    (new Extend\Notification())
+        ->type(ServerIncidentBlueprint::class, ['alert', 'email']),
+
+    (new Extend\Settings())
+        ->serializeToForum('garrisonWebhookConfigured', 'ernestdefoe-garrison.webhook_url', fn ($v) => ! empty($v)),
 ];
 
 /*

@@ -15,7 +15,60 @@ ernestdefoe-garrison:
       unresolvable: That address does not resolve to anything.
       private_address: That address points inside this network, so Garrison will not fetch it.
 
+  # 🚨 Email copy, and the one place in this file where a mistake cannot be
+  # taken back — a forum post can be edited, a sent email cannot. The subject
+  # names the server, because this is read on a lock screen.
+  email:
+    server_incident:
+      subject:
+        down: "{name} is down"
+        unready: "{name} stopped accepting players"
+        recovered: "{name} is back up"
+        abandoned: "{name} still needs a hand"
+      # 🚨 ONE body per state, shared by the plain and HTML templates.
+      #
+      # The HTML view renders this same text through Flarum's own formatter,
+      # which turns the blank lines into paragraphs and the bare URL into a
+      # link. Writing HTML here instead would not work — the formatter parses
+      # forum markup, not markup you hand it — and two copies of the same
+      # sentence is how a copy fix lands in one of them.
+      body:
+        down: |-
+          {name} is not running, and Garrison could not get it started again.
+
+          {url}
+        unready: |-
+          {name} is running, but players cannot get in. Garrison noticed because its health checks stopped passing, not because the process stopped — from the outside it still looks fine.
+
+          {url}
+        recovered: |-
+          {name} is accepting players again. Nothing else is needed.
+
+          {url}
+        abandoned: |-
+          Garrison has restarted {name} several times and it keeps failing the same way, so it has stopped trying rather than restart it in a loop. It needs somebody to look at it.
+
+          {url}
+        finding: "What the health check saw: {finding}"
+
   forum:
+    # The notification component reads these. The state is mapped to a key
+    # through a closed switch rather than interpolated, so an unexpected state
+    # can never ask for a key that does not exist.
+    notification:
+      down: "{name} is down"
+      unready: "{name} stopped accepting players"
+      recovered: "{name} is back"
+      abandoned: "Garrison has stopped trying to fix {name}"
+
+    settings:
+      # 🚨 The label on the checkbox in a user's own notification preferences.
+      # The key is `notify_<blueprint type>_label` — the type verbatim,
+      # camelCase and all. Without this row the checkbox renders its raw key,
+      # and without the grid entry in index.js there is no checkbox at all:
+      # the preference exists and nothing can change it.
+      notify_garrisonServerIncident_label: A game server I help run needs attention
+
     # 🚨 Every user-facing string lives here. Zero hardcoded English anywhere
     # in PHP or JS — a community running in German must get a German panel.
     title: Game servers
@@ -65,6 +118,9 @@ ernestdefoe-garrison:
 
   admin:
     title: Garrison
+    alerts: Alerts
+    webhook: Discord or webhook address
+    webhook_help: Posted to when a server stops accepting players, and again when it comes back. A Discord webhook address is detected automatically; anything else receives JSON.
     load_failed: Could not load Garrison's state.
 
     hosts: Game hosts

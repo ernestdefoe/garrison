@@ -47,6 +47,7 @@ export default class GarrisonPage extends ExtensionPage {
       <div className="GarrisonAdmin ExtensionPage-settings">
         <div className="container">
           {this.tokenNotice()}
+          {this.alerts()}
           {this.hosts()}
           {this.servers()}
           {this.incidents()}
@@ -81,6 +82,30 @@ export default class GarrisonPage extends ExtensionPage {
           this.t('token_copied')
         )}
       </div>
+    );
+  }
+
+  /**
+   * 🚨 One field, above the hosts, because it is the setting most likely to
+   * matter at 3am. A Flarum notification reaches somebody who opens the forum;
+   * an outage overnight is noticed by whoever has Discord on their phone.
+   */
+  alerts() {
+    return (
+      <section className="GarrisonAdmin-section">
+        <h2>{this.t('alerts')}</h2>
+        <div className="GarrisonAdmin-field">
+          <label for="garrison-webhook">{this.t('webhook')}</label>
+          <input
+            id="garrison-webhook"
+            className="FormControl"
+            placeholder="https://discord.com/api/webhooks/…"
+            bidi={this.setting('ernestdefoe-garrison.webhook_url')}
+          />
+          <span className="GarrisonAdmin-meta">{this.t('webhook_help')}</span>
+        </div>
+        {this.submitButton()}
+      </section>
     );
   }
 
