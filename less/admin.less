@@ -171,3 +171,38 @@
   gap: 8px;
   max-width: 520px;
 }
+
+/*
+ * Garrison saying whether Garrison can reach anybody.
+ *
+ * 🚨 The three states are visually distinct because only one of them is a
+ * problem. `unknown` deliberately looks like a note rather than a warning: on
+ * a fresh install nothing has run yet, and a panel that opens shouting teaches
+ * an operator to stop reading it.
+ */
+.GarrisonAdmin-delivery {
+  border-inline-start: 3px solid var(--muted-color);
+  border-radius: 2px;
+  margin-bottom: 14px;
+  padding: 8px 12px;
+}
+
+.GarrisonAdmin-delivery-headline {
+  font-weight: 600;
+}
+
+.GarrisonAdmin-delivery--ok {
+  border-inline-start-color: var(--success-color, #6bbf6b);
+}
+
+.GarrisonAdmin-delivery--bad {
+  border-inline-start-color: var(--error-color, #d14848);
+
+  /* The only one that gets a tint. A panel where everything is coloured says
+     nothing about which line to read first. */
+  background: fade(#d14848, 8%);
+}
+
+.GarrisonAdmin-delivery--muted {
+  border-inline-start-color: var(--muted-color);
+}

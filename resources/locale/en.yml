@@ -123,6 +123,17 @@ ernestdefoe-garrison:
     webhook_help: Posted to when a server stops accepting players, and again when it comes back. A Discord webhook address is detected automatically; anything else receives JSON.
     load_failed: Could not load Garrison's state.
 
+    # 🚨 The wording matters more than usual here. This is Garrison reporting
+    # on its own ability to tell anybody anything, and an operator reading
+    # "stalled" needs to know what it costs them and what to do — not a status
+    # word they have to go and research.
+    delivery:
+      ok: Alerts are getting through.
+      stalled: Alerts are not getting through.
+      unknown: Garrison has not checked whether alerts are getting through yet.
+      stalled_help: Garrison sends alerts as background jobs, and nothing on this forum has run one for a while — so a server going down would be recorded here and nobody would be told. This is usually a queue worker that has stopped; restarting it is the fix.
+      last_ran: "Last confirmed {when}"
+
     hosts: Game hosts
     no_hosts: No hosts paired yet. Give one a name and pair it, then put the token in that host's agent config.
     host_name_placeholder: A name for the host

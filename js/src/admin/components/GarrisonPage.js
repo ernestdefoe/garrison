@@ -94,6 +94,7 @@ export default class GarrisonPage extends ExtensionPage {
     return (
       <section className="GarrisonAdmin-section">
         <h2>{this.t('alerts')}</h2>
+        {this.delivery()}
         <div className="GarrisonAdmin-field">
           <label for="garrison-webhook">{this.t('webhook')}</label>
           <input
@@ -106,6 +107,48 @@ export default class GarrisonPage extends ExtensionPage {
         </div>
         {this.submitButton()}
       </section>
+    );
+  }
+
+  /**
+   * 🚨 Whether an alert could actually get out, stated plainly.
+   *
+   * Every notification Garrison sends is a job on the forum's queue, and a
+   * forum whose queue worker is dead loses all of them without a sound —
+   * `sync()` returns happily, nothing is logged, and no notification is ever
+   * written. The panel would stay green right through the outage this product
+   * exists to catch. It happened on the forum Garrison was built on, for three
+   * days, and the only reason it was found was somebody going looking.
+   *
+   * So the answer here is MEASURED, not inferred from configuration: once a
+   * minute Garrison pushes a heartbeat job down the same road an alert takes,
+   * and this reports whether a worker has run one. "A job pushed a minute ago
+   * has been run" is the same sentence an alert needs to be true.
+   */
+  delivery() {
+    const d = this.state.delivery;
+
+    if (!d) return null;
+
+    // 🚨 `unknown` is not a warning. Before the first scheduled tick there is
+    // no evidence either way, and a panel that cries wolf on a fresh install
+    // teaches an operator to ignore the one time it means something.
+    const tone = { ok: 'ok', stalled: 'bad', unknown: 'muted' }[d.state] || 'muted';
+
+    return (
+      <div className={'GarrisonAdmin-delivery GarrisonAdmin-delivery--' + tone}>
+        <div className="GarrisonAdmin-delivery-headline">
+          {app.translator.trans('ernestdefoe-garrison.admin.delivery.' + d.state)}
+        </div>
+        {d.state === 'stalled' ? <div className="GarrisonAdmin-meta">{this.t('delivery.stalled_help')}</div> : null}
+        {d.ranAt ? (
+          <div className="GarrisonAdmin-meta">
+            {app.translator.trans('ernestdefoe-garrison.admin.delivery.last_ran', {
+              when: humanTime(d.ranAt),
+            })}
+          </div>
+        ) : null}
+      </div>
     );
   }
 

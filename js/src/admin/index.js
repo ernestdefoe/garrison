@@ -1,32 +1,19 @@
 import app from 'flarum/admin/app';
 
-import GarrisonPage from './GarrisonPage';
+/*
+ * 🚨 `export { default as extend }`, NOT `export * from './extend'`.
+ *
+ * `export *` does not re-export a default export. The file compiles, the
+ * bundle contains every line of the settings screen, and Flarum simply never
+ * sees an extender — so the extension page falls back to core's own and says
+ * "This extension has no settings", which reads as a page that was never
+ * written rather than one that was never reached.
+ */
+export { default as extend } from './extend';
 
-app.initializers.add('ernestdefoe-garrison', () => {
-  app.extensionData
-    .for('ernestdefoe-garrison')
-    .registerPage(GarrisonPage)
-
-    /*
-     * 🚨 Permission labels say what each one ACTUALLY does. "View game
-     * servers" would be a lie: a server marked public is visible to everyone
-     * with no permission at all, and an admin who grants this expecting it to
-     * control that will be confused for a long time.
-     */
-    .registerPermission(
-      { icon: 'fas fa-eye', label: app.translator.trans('ernestdefoe-garrison.admin.permissions.view'), permission: 'garrison.view' },
-      'view'
-    )
-    .registerPermission(
-      { icon: 'fas fa-power-off', label: app.translator.trans('ernestdefoe-garrison.admin.permissions.control'), permission: 'garrison.control' },
-      'moderate'
-    )
-    .registerPermission(
-      { icon: 'fas fa-terminal', label: app.translator.trans('ernestdefoe-garrison.admin.permissions.console'), permission: 'garrison.console' },
-      'moderate'
-    )
-    .registerPermission(
-      { icon: 'fas fa-tower-observation', label: app.translator.trans('ernestdefoe-garrison.admin.permissions.manage'), permission: 'garrison.manage' },
-      'moderate'
-    );
-});
+/*
+ * The page and the permissions are registered by the Admin extender in
+ * extend.js. Nothing else has to happen at boot, but the initializer stays so
+ * the extension reports as initialised rather than as a silent no-op.
+ */
+app.initializers.add('ernestdefoe-garrison', () => {});

@@ -9,6 +9,7 @@ use ErnestDefoe\Garrison\Game\Catalog;
 use ErnestDefoe\Garrison\Model\GarrisonAgent;
 use ErnestDefoe\Garrison\Model\Incident;
 use ErnestDefoe\Garrison\Model\Server;
+use ErnestDefoe\Garrison\Notification\DeliveryCheck;
 use Flarum\Foundation\ValidationException;
 use Flarum\Http\RequestUtil;
 use Flarum\Locale\TranslatorInterface;
@@ -33,7 +34,8 @@ class AdminController implements RequestHandlerInterface
     public function __construct(
         protected TranslatorInterface $translator,
         protected Factory $filesystem,
-        protected Artwork $artwork
+        protected Artwork $artwork,
+        protected DeliveryCheck $delivery
     ) {
     }
 
@@ -92,6 +94,15 @@ class AdminController implements RequestHandlerInterface
                 'gameName' => Catalog::name($s->game),
                 'canFetchLogo' => Catalog::artworkCandidates($s->game) !== [],
             ])->values()->all(),
+
+            /*
+             * 🚨 Whether an alert could actually get out, measured rather
+             * than assumed. See DeliveryCheck: a forum whose queue worker is
+             * dead loses every Garrison notification in total silence, and the
+             * panel would otherwise stay green through the outage this
+             * product exists to catch.
+             */
+            'delivery' => $this->delivery->report(),
 
             'incidents' => Incident::query()->latest('id')->limit(25)->get()->map(fn (Incident $i) => [
                 'id' => $i->id,

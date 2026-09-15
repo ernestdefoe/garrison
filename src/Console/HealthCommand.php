@@ -6,6 +6,7 @@ use ErnestDefoe\Garrison\Agent\Gateway;
 use ErnestDefoe\Garrison\Game\Artwork;
 use ErnestDefoe\Garrison\Health\Ladder;
 use ErnestDefoe\Garrison\Model\Server;
+use ErnestDefoe\Garrison\Notification\DeliveryCheck;
 use Flarum\Console\AbstractCommand;
 use Flarum\User\User;
 
@@ -22,7 +23,8 @@ class HealthCommand extends AbstractCommand
     public function __construct(
         protected Ladder $ladder,
         protected Artwork $artwork,
-        protected Gateway $gateway
+        protected Gateway $gateway,
+        protected DeliveryCheck $delivery
     ) {
         parent::__construct();
     }
@@ -91,6 +93,19 @@ class HealthCommand extends AbstractCommand
                 $this->info('pruned ' . $pruned . ' old console line(s)');
             }
         }
+
+        /**
+         * 🚨 The alert path proving itself, on the same tick.
+         *
+         * Everything above this line assumes that noticing a problem and
+         * telling somebody are the same act. They are not: the telling goes
+         * through the forum's queue, and a queue with no worker swallows every
+         * alert without a word. This pushes one trivial job down that exact
+         * road so the admin screen can say whether anything is travelling it.
+         * See DeliveryCheck — it exists because this failed silently for three
+         * days on the forum this extension was built on.
+         */
+        $this->delivery->beat();
 
         if ($acted === 0 && $got === 0) {
             $this->info('Nothing to do.');

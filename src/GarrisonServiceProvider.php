@@ -10,10 +10,12 @@ use ErnestDefoe\Garrison\Api\Controller\ConsoleController;
 use ErnestDefoe\Garrison\Game\Artwork;
 use ErnestDefoe\Garrison\Health\Ladder;
 use ErnestDefoe\Garrison\Notification\Alerts;
+use ErnestDefoe\Garrison\Notification\DeliveryCheck;
 use ErnestDefoe\Garrison\Notification\Webhooks;
 use Flarum\Foundation\AbstractServiceProvider;
 use Flarum\Locale\TranslatorInterface;
 use Illuminate\Contracts\Filesystem\Factory;
+use Illuminate\Contracts\Queue\Queue;
 use Flarum\Notification\NotificationSyncer;
 use Flarum\Settings\SettingsRepositoryInterface;
 use Illuminate\Database\ConnectionInterface;
@@ -61,6 +63,22 @@ class GarrisonServiceProvider extends AbstractServiceProvider
             );
         });
 
+        /*
+         * 🚨 The queue is resolved when DeliveryCheck is built, not captured
+         * at boot. Core's own EmailNotificationDriver has a comment explaining
+         * why: the RoutingQueue wrapper that puts jobs on their registered
+         * queue is applied in QueueServiceProvider::boot, AFTER extension
+         * service providers register. Grabbing the connection too early gets
+         * the unwrapped driver and silently bypasses routing — which for a
+         * heartbeat would mean measuring a queue nothing else uses.
+         */
+        $this->container->singleton(DeliveryCheck::class, function ($container) {
+            return new DeliveryCheck(
+                $container->make(Queue::class),
+                $container->make(SettingsRepositoryInterface::class)
+            );
+        });
+
         $this->container->singleton(Ladder::class, function ($container) {
             return new Ladder(
                 $container->make(Dispatcher::class),
@@ -80,7 +98,8 @@ class GarrisonServiceProvider extends AbstractServiceProvider
             return new AdminController(
                 $container->make(TranslatorInterface::class),
                 $container->make(Factory::class),
-                $container->make(Artwork::class)
+                $container->make(Artwork::class),
+                $container->make(DeliveryCheck::class)
             );
         });
     }
