@@ -207,6 +207,11 @@ type Status struct {
 	// Stats rides along with a status report rather than needing its own
 	// round trip, because the page that shows one always shows the other.
 	Stats *Stats `json:"stats,omitempty"`
+
+	// Health is the readiness verdict. Deliberately separate from State:
+	// "running" and "players can get in" are different facts, and the whole
+	// product exists because they were conflated for twenty hours.
+	Health any `json:"health,omitempty"`
 }
 
 // Stats is one resource sample.

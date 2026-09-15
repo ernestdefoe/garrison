@@ -15,6 +15,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/ernestdefoe/garrison/internal/health"
 	"github.com/ernestdefoe/garrison/internal/protocol"
 )
 
@@ -33,6 +34,14 @@ type Server struct {
 	// forum treats its absence as unknown rather than guessing from an image
 	// name: a guess that is wrong once is worse than an honest blank.
 	Game string `json:"game,omitempty"`
+
+	// Health are the readiness probes for this server, from its game manifest.
+	//
+	// 🚨 Configured on the AGENT, never sent by the forum. A probe names ports
+	// and reads logs; letting the forum define one would hand a compromised
+	// forum a way to make the agent read files and dial addresses of its
+	// choosing — which is the whole capability the verb set exists to withhold.
+	Health []health.Probe `json:"health,omitempty"`
 
 	// docker
 	Container string `json:"container,omitempty"`

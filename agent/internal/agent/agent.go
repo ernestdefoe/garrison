@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/ernestdefoe/garrison/internal/driver"
+	"github.com/ernestdefoe/garrison/internal/health"
 	"github.com/ernestdefoe/garrison/internal/protocol"
 )
 
@@ -342,6 +343,23 @@ func (a *Agent) StatusAll(ctx context.Context) []protocol.Status {
 				st.Stats = &stats
 			}
 		}
+
+		/*
+		 * 🚨 Health is evaluated on EVERY poll, not on request.
+		 *
+		 * The failure this exists to catch is silent: a server that is up,
+		 * saving its world, refreshing its lobby, and unjoinable. Nobody goes
+		 * looking for that — they find out when a player complains, which on
+		 * the outage that prompted this was twenty hours later. A check that
+		 * has to be asked for is a check nobody runs.
+		 */
+		st.Health = health.Check(ctx, st.State == protocol.StateRunning, s.Health, func(c context.Context, n int) ([]string, error) {
+			var lines []string
+			err := drv.Tail(c, s, n, false, func(l protocol.Line) {
+				lines = append(lines, l.Text)
+			})
+			return lines, err
+		})
 
 		out = append(out, st)
 	}
