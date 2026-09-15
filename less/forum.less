@@ -896,3 +896,25 @@
 .GarrisonBoard {
   margin-bottom: 16px;
 }
+
+/*
+ * 🚨 A Page Builder block sits inside a layout somebody else designed, so it
+ * brings no margins of its own — the surrounding section owns the spacing, and
+ * a block that adds its own is the one that looks misaligned on every page it
+ * is placed on.
+ */
+.GarrisonPageBuilderBlock {
+  .GarrisonServer {
+    /* Compact rows are a layout choice the page's editor made. */
+    &-meta {
+      display: block;
+    }
+  }
+}
+
+.GarrisonPageBuilderBlock.is-compact {
+  .GarrisonServer-meta,
+  .GarrisonServer-health {
+    display: none;
+  }
+}

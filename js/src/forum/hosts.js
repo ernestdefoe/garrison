@@ -34,6 +34,17 @@ export default function registerWidgetHosts(app, makeContent) {
   hosted = registerBespoke(app, makeContent) || hosted;
 
   /*
+   * 🚨 Page Builder's return value is deliberately DISCARDED.
+   *
+   * Its blocks are placed on specific pages, so a forum with a Garrison block
+   * on one page still wants the sidebar everywhere else. Counting it as
+   * "hosted elsewhere" would make placing the block once remove the widget
+   * from the entire rest of the forum — a change nobody asked for, made by an
+   * unrelated action, which is the worst kind.
+   */
+  registerPageBuilder(app, makeContent);
+
+  /*
    * 🚨 When a widget framework is managing placement, the stock sidebar mount
    * stands down — otherwise the same list is on the page twice and the second
    * copy looks like a bug in whichever framework the operator just installed.
@@ -93,6 +104,53 @@ function registerFofWidget(app, makeContent) {
       position: 1,
     })
     .extend(app, 'ernestdefoe-garrison');
+
+  return true;
+}
+
+/**
+ * Page Builder.
+ *
+ * 🚨 The ONLY host of the four with a server half, and this is just the client
+ * half — src/Widget/ServerStatusBlock.php is the other, registered from
+ * extend.php and responsible for deciding what this actor may see. So this
+ * component renders what it was HANDED and never asks for more: the join
+ * details are in `block.data` only when the server decided they should be.
+ *
+ * 🚨 Registered through `window.PageBuilderBlockQueue`, not by touching the
+ * registry directly, for the same reason Bespoke uses a queue: which of two
+ * extensions initialises first is not something either of them decides, and a
+ * block registered too early is a block missing from the page with nothing in
+ * the console to say why.
+ *
+ * 🚨 This half did not exist until it was tested against a real Page Builder
+ * install. The PHP half registered, resolved and gated correctly all along —
+ * which is exactly why nobody noticed: every test that could be written
+ * without the other extension passed.
+ */
+function registerPageBuilder(app, makeContent) {
+  const flarum = flarumGlobal();
+
+  if (!flarum?.extensions || !('ernestdefoe-page-builder' in flarum.extensions)) return false;
+
+  globalThis.PageBuilderBlockQueue = globalThis.PageBuilderBlockQueue || [];
+
+  globalThis.PageBuilderBlockQueue.push({
+    // 🚨 Matches ServerStatusBlock::type() exactly. A mismatch is silent: the
+    // server resolves data for a block the client never renders.
+    type: 'garrison-server-status',
+    component: {
+      view(vnode) {
+        const settings = vnode.attrs?.block?.settings || {};
+
+        return (
+          <div className={'GarrisonPageBuilderBlock' + (settings.compact ? ' is-compact' : '')}>
+            {makeContent()}
+          </div>
+        );
+      },
+    },
+  });
 
   return true;
 }
