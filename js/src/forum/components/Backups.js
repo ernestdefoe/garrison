@@ -82,6 +82,8 @@ export default class Backups extends Component {
           </p>
         ) : null}
 
+        {this.offsite(s)}
+
         {this.outcome ? this.report() : null}
 
         {list.length === 0 ? (
@@ -92,6 +94,65 @@ export default class Backups extends Component {
           <ul className="GarrisonBackups-list">{list.map((b) => this.row(s, b))}</ul>
         )}
       </section>
+    );
+  }
+
+  /**
+   * Whether copies are also going somewhere off this host.
+   *
+   * 🚨 Shown even when it is NOT configured, as one quiet line.
+   *
+   * The temptation is to render nothing until somebody sets it up, which keeps
+   * the panel tidy and means the operators who most need off-site backups —
+   * the ones who have never thought about it — never learn the feature exists.
+   * The disaster it covers is the one where the local backups are on the disk
+   * that died. One line, no alarm, and a note saying where it is configured,
+   * because it is deliberately not configurable from here.
+   */
+  offsite(s) {
+    const o = s.offsite;
+
+    if (!o) return null;
+
+    if (!o.configured) {
+      return (
+        <p className="GarrisonBackups-offsite GarrisonBackups-offsite--off">
+          {app.translator.trans('ernestdefoe-garrison.forum.backups.offsite.none')}
+        </p>
+      );
+    }
+
+    if (o.lastError) {
+      return (
+        <div className="GarrisonBackups-offsite GarrisonBackups-offsite--bad">
+          <strong>
+            {app.translator.trans('ernestdefoe-garrison.forum.backups.offsite.failing', { bucket: o.bucket })}
+          </strong>
+          {/*
+            The provider's own words. "SignatureDoesNotMatch", "NoSuchBucket"
+            and "AccessDenied" each point at a different fix, and an operator
+            debugging their own bucket has no other source of truth.
+          */}
+          <span className="GarrisonBackups-outcomeDetail">{o.lastError}</span>
+        </div>
+      );
+    }
+
+    return (
+      <p className="GarrisonBackups-offsite GarrisonBackups-offsite--ok">
+        {o.lastAt
+          ? app.translator.trans('ernestdefoe-garrison.forum.backups.offsite.ok', {
+              bucket: o.bucket,
+              when: humanTime(o.lastAt),
+            })
+          : /*
+              🚨 A distinct sentence, not "no copies yet". The agent remembers
+              the last copy in memory, so a restarted agent genuinely does not
+              know — and telling somebody nothing has ever been copied when it
+              has is worse than admitting the gap.
+            */
+            app.translator.trans('ernestdefoe-garrison.forum.backups.offsite.unknown', { bucket: o.bucket })}
+      </p>
     );
   }
 

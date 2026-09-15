@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/ernestdefoe/garrison/internal/health"
+	"github.com/ernestdefoe/garrison/internal/offsite"
 	"github.com/ernestdefoe/garrison/internal/protocol"
 )
 
@@ -79,6 +80,21 @@ type Server struct {
 	BackupRoot  string   `json:"backupRoot,omitempty"`
 	BackupPaths []string `json:"backupPaths,omitempty"`
 	BackupKeep  int      `json:"backupKeep,omitempty"`
+
+	/*
+	 * Off-site copies.
+	 *
+	 * 🚨 The bucket keys live HERE, in a file on the host, and never in the
+	 * forum. The forum is a PHP application on the public internet running
+	 * third-party extension code; it is the part of this system most likely to
+	 * be compromised, and credentials stored there are credentials that leak
+	 * with it. Putting them in the admin panel would also mean sending them
+	 * down the poll channel to reach the agent, so they would be exposed in
+	 * two places rather than none.
+	 *
+	 * The forum is told WHETHER copies are landing. It is never told how.
+	 */
+	Offsite offsite.Config `json:"offsite,omitempty"`
 }
 
 // DefaultStopGrace is used when a server does not set one. Valheim's own save

@@ -158,6 +158,15 @@ ernestdefoe-garrison:
       confirm_restore_do_stopping: Stop it and restore
       confirm_delete: This deletes the backup from the host. It cannot be undone.
       confirm_delete_do: Yes, delete it
+      # 🚨 Configured on the game host, not here — the bucket keys never reach
+      # the forum, which is the part of this system most likely to be
+      # compromised. The panel says where copies go and whether they arrive.
+      offsite:
+        none: Backups are kept on the game host only. Copies to off-site storage are set up in the agent's config file.
+        ok: "Also copied to {bucket} — last copy {when}."
+        unknown: "Also copied to {bucket}. Nothing has been copied since this agent last started."
+        failing: "Copies to {bucket} are failing."
+
       step:
         stopping: Stopping the server…
         restoring: Restoring…

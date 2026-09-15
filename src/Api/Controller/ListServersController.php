@@ -124,6 +124,21 @@ class ListServersController implements RequestHandlerInterface
                  * needs.
                  */
                 $row['backups'] = $server->backupList();
+
+                /**
+                 * 🚨 The OUTCOME only. Never a key, never a secret, never an
+                 * endpoint that embeds one — the bucket name and whether the
+                 * last copy worked is the whole of what a panel needs, and
+                 * everything beyond that is authority the forum deliberately
+                 * does not hold.
+                 */
+                $row['offsite'] = [
+                    'configured' => (bool) $server->offsite_configured,
+                    'bucket' => $server->offsite_bucket,
+                    'lastAt' => $server->offsite_last_at?->toIso8601String(),
+                    'lastOk' => (bool) $server->offsite_last_ok,
+                    'lastError' => $server->offsite_last_error,
+                ];
             }
 
             if ($server->joinDetailsVisibleTo($actor)) {

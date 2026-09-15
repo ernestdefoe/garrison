@@ -69,6 +69,9 @@ not merely by passing:
     internal/driver      the supervisor abstraction + docker and process drivers
     internal/supervise   process supervision: groups, scrollback, the stop ladder
     internal/config      the agent's config — the only place a command is written
+    internal/backup      archives: create, list, restore, prune, and safety copies
+    internal/offsite     S3-compatible copies, signed by hand to keep deps at one
+    internal/health      readiness probes — "running" and "joinable" are not the same
 
 ## Try it
 
@@ -84,15 +87,79 @@ not merely by passing:
 `--check` validates the config and reports what the host can actually do,
 rather than letting the first click be where you find out Docker is missing.
 
+## Configuring a server on the host
+
+Everything that names a **path, a file or a credential** is configured here, on
+the game host, and never in the forum. That is the security boundary, not a
+convenience: the forum is a PHP application on the public internet running
+third-party extension code, and it is the part of this system most likely to be
+compromised. It can ask for a backup of a server it already knows about. It
+cannot say what gets archived, where it is written, or where a copy is sent.
+
+```json
+{
+  "id": "valheim",
+  "name": "Shattered Pact",
+  "driver": "docker",
+  "container": "valheim",
+  "game": "valheim",
+  "stopGraceSeconds": 120,
+
+  "backupRoot": "/srv/valheim",
+  "backupPaths": ["worlds", "server.cfg"],
+  "backupDir": "/srv/valheim/garrison-backups",
+  "backupKeep": 14,
+
+  "offsite": {
+    "endpoint": "https://s3.us-west-002.backblazeb2.com",
+    "region": "us-west-002",
+    "bucket": "shattered-pact-backups",
+    "prefix": "valheim",
+    "accessKey": "…",
+    "secretKey": "…",
+    "pathStyle": true,
+    "keep": 30
+  }
+}
+```
+
+### Off-site copies
+
+Any S3-compatible provider: AWS S3, Backblaze B2, Cloudflare R2, Wasabi,
+MinIO. A copy is made after each successful backup, and retention runs against
+the bucket separately from the local one — `keep` off-site is usually larger
+than `backupKeep`, because the whole point of the remote copy is that it
+outlives the host.
+
+- **`endpoint` must be `https://`.** Uploads are signed with
+  `UNSIGNED-PAYLOAD`, which avoids reading a multi-gigabyte archive twice; that
+  trade is only safe under TLS, so a plain `http://` endpoint is refused with an
+  error saying why rather than silently accepted.
+- **`pathStyle` is what most non-AWS providers need.** AWS serves a bucket as
+  `<bucket>.s3.amazonaws.com`; MinIO and, depending on setup, B2 and R2 serve it
+  as `<endpoint>/<bucket>`. Getting it wrong produces a DNS failure or a 404,
+  which reads as a wrong endpoint and sends you looking in the wrong place.
+- **`region`** is required. Providers that do not use regions accept `auto` or
+  `us-east-1`.
+- Archives over 64 MiB are uploaded in parts, because S3 caps a single PUT at
+  5 GiB — without that, off-site backups work for a year and then stop the day
+  the world gets big.
+
+A failed upload never fails the backup. A local archive that exists is worth
+more than a copy that did not arrive: the common disasters are all recovered
+from the local one. The forum's panel says whether copies are landing and shows
+the provider's own error when they are not.
+
 ## What is deliberately not here
 
-- **No Flarum extension.** Phase 1.
+- **No credentials in the forum.** Off-site keys live in this file. Putting
+  them in the admin panel would mean storing them in the most attackable part
+  of the system and then sending them over the wire to get here.
 - **No systemd or Windows driver.** The interface has room for both; adding
   them before the interface was proved would have been guessing.
-- **No auth beyond a bearer token.** Pairing, rotation and revocation are
-  phase 1. The token in the spike config is `spike`.
-- **No TLS.** The agent speaks `ws://` to localhost in the spike. Production
-  is `wss://` to the forum, which already terminates TLS.
+- **No `exec` verb, and there will not be one.** A fully compromised forum can
+  restart a server it already knows about. It cannot ask for a shell, because
+  there is no verb through which it could.
 
 ## Notes for whoever picks this up
 

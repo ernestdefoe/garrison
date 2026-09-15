@@ -267,6 +267,35 @@ type Status struct {
 	 * should not have to wait a poll for its first answer either.
 	 */
 	Backups []Backup `json:"backups,omitempty"`
+
+	// Offsite is what the agent knows about copies to remote storage. Nil when
+	// the operator has not configured any.
+	Offsite *OffsiteStatus `json:"offsite,omitempty"`
+}
+
+// OffsiteStatus is the agent's account of remote copies.
+//
+// 🚨 Reported from what the agent REMEMBERS, not by asking the bucket.
+//
+// Listing the bucket on every poll would be an S3 API call per server every
+// twenty-five seconds — a real bill, a real rate limit, and a status report
+// that fails whenever a provider has a bad minute. What an operator actually
+// needs to know is "is this on, and did the last copy work", and the agent
+// already knows both from the copy it made.
+//
+// The honest cost is that this resets when the agent restarts, so a fresh agent
+// reports Configured with no LastAt. The forum says exactly that rather than
+// implying nothing has ever been copied.
+type OffsiteStatus struct {
+	Configured bool `json:"configured"`
+
+	// Bucket and endpoint, so the panel can say WHERE copies go. Never the
+	// keys: those are on the host and stay there.
+	Bucket string `json:"bucket,omitempty"`
+
+	LastAt    *time.Time `json:"lastAt,omitempty"`
+	LastOK    bool       `json:"lastOk,omitempty"`
+	LastError string     `json:"lastError,omitempty"`
 }
 
 // Backup is one archive the agent is holding.

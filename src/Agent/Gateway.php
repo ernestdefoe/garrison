@@ -260,6 +260,49 @@ class Gateway
             $server->backups = json_encode($this->validBackups($report['backups']));
         }
 
+        /**
+         * 🚨 An ABSENT `offsite` clears the flags; it does not leave them
+         * standing.
+         *
+         * An operator who removes the bucket keys from the agent's config has
+         * turned off-site copies OFF, and the panel must stop claiming
+         * otherwise. Treating absence as "no news" would leave a server showing
+         * "copies are going to b2" months after they stopped — the most
+         * dangerous kind of stale, because it is a reassurance.
+         */
+        $offsite = $report['offsite'] ?? null;
+
+        if (is_array($offsite) && ! empty($offsite['configured'])) {
+            $server->offsite_configured = true;
+            $server->offsite_bucket = isset($offsite['bucket']) ? (string) $offsite['bucket'] : null;
+            $server->offsite_last_ok = ! empty($offsite['lastOk']);
+            $server->offsite_last_error = empty($offsite['lastError']) ? null : (string) $offsite['lastError'];
+
+            $server->offsite_last_at = null;
+
+            if (! empty($offsite['lastAt'])) {
+                try {
+                    $at = Carbon::parse($offsite['lastAt']);
+
+                    // The same year guard the running_since field needs: a Go
+                    // zero time marshals as 0001-01-01 and PHP parses it
+                    // happily, which once put "Dec 31, 0000" on a status page.
+                    if ($at->year > 2000) {
+                        $server->offsite_last_at = $at;
+                    }
+                } catch (\Throwable) {
+                    // An unparseable timestamp is not worth failing a whole
+                    // status report over.
+                }
+            }
+        } else {
+            $server->offsite_configured = false;
+            $server->offsite_bucket = null;
+            $server->offsite_last_at = null;
+            $server->offsite_last_ok = false;
+            $server->offsite_last_error = null;
+        }
+
         $server->last_status_at = Carbon::now();
         $server->updated_at = Carbon::now();
         $server->save();

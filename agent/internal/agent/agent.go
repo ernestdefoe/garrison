@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"runtime"
 	"sync"
 	"time"
@@ -12,6 +13,7 @@ import (
 	"github.com/ernestdefoe/garrison/internal/backup"
 	"github.com/ernestdefoe/garrison/internal/driver"
 	"github.com/ernestdefoe/garrison/internal/health"
+	"github.com/ernestdefoe/garrison/internal/offsite"
 	"github.com/ernestdefoe/garrison/internal/protocol"
 )
 
@@ -26,15 +28,21 @@ type Agent struct {
 
 	mu      sync.Mutex
 	streams map[string]context.CancelFunc // by request ID
+
+	// The last off-site copy per server, so status can report it without
+	// asking the bucket on every poll. See OffsiteStatus for why.
+	offsiteMu   sync.Mutex
+	offsiteLast map[string]offsiteOutcome
 }
 
 // New builds an agent over the servers it is configured with, keeping only
 // the drivers that actually work on this host.
 func New(ctx context.Context, servers []driver.Server, candidates driver.Set) (*Agent, []string) {
 	a := &Agent{
-		servers: make(map[string]driver.Server, len(servers)),
-		drivers: make(driver.Set),
-		streams: make(map[string]context.CancelFunc),
+		servers:     make(map[string]driver.Server, len(servers)),
+		drivers:     make(driver.Set),
+		streams:     make(map[string]context.CancelFunc),
+		offsiteLast: make(map[string]offsiteOutcome),
 	}
 	for _, s := range servers {
 		a.servers[s.ID] = s
@@ -205,7 +213,25 @@ func (a *Agent) dispatch(ctx context.Context, req protocol.Request, srv driver.S
 		// one failed, leave the operator with fewer than they started with.
 		removed, _ := backup.Prune(cfg)
 
-		return map[string]any{"backup": b, "pruned": removed}, nil
+		/*
+		 * 🚨 The off-site copy happens AFTER the local one is complete, and its
+		 * failure does not fail the backup.
+		 *
+		 * A local archive that exists is worth more than an upload that
+		 * worked: the common disasters — a bad mod, a wiped world, a restore
+		 * from the wrong save — are all recovered from the local copy, and the
+		 * off-site one is for the rarer case of losing the host. Returning an
+		 * error here because a bucket was unreachable would tell an operator
+		 * their backup failed when it plainly did not, and the honest version
+		 * of that sentence is what `offsite` in the result says instead.
+		 */
+		result := map[string]any{"backup": b, "pruned": removed}
+
+		if srv.Offsite.Configured() {
+			result["offsite"] = a.copyOffsite(ctx, srv, cfg, b)
+		}
+
+		return result, nil
 
 	case protocol.VerbBackupList:
 		cfg, err := backupConfig(srv)
@@ -350,6 +376,97 @@ func (a *Agent) CancelAll() {
 	}
 }
 
+// offsiteStatus reports what this agent knows about remote copies for a server.
+func (a *Agent) offsiteStatus(s driver.Server) *protocol.OffsiteStatus {
+	if !s.Offsite.Configured() {
+		return nil
+	}
+
+	status := &protocol.OffsiteStatus{Configured: true, Bucket: s.Offsite.Bucket}
+
+	a.offsiteMu.Lock()
+	last, ok := a.offsiteLast[s.ID]
+	a.offsiteMu.Unlock()
+
+	if ok {
+		status.LastAt = &last.at
+		status.LastOK = last.ok
+		status.LastError = last.err
+	}
+
+	return status
+}
+
+// rememberOffsite records the outcome of one copy.
+type offsiteOutcome struct {
+	at  time.Time
+	ok  bool
+	err string
+}
+
+func (a *Agent) rememberOffsite(serverID string, ok bool, errText string) {
+	a.offsiteMu.Lock()
+	defer a.offsiteMu.Unlock()
+
+	if a.offsiteLast == nil {
+		a.offsiteLast = map[string]offsiteOutcome{}
+	}
+
+	a.offsiteLast[serverID] = offsiteOutcome{at: time.Now().UTC(), ok: ok, err: errText}
+}
+
+// copyOffsite uploads one finished archive and reports how it went.
+//
+// 🚨 Never returns an error, because none of its callers should fail on one.
+// The shape it returns is what the forum shows: "copied", or "not copied and
+// here is the provider's own reason". An operator debugging bucket credentials
+// needs "SignatureDoesNotMatch" or "NoSuchBucket", not "off-site failed".
+func (a *Agent) copyOffsite(ctx context.Context, srv driver.Server, cfg backup.Config, b *backup.Backup) map[string]any {
+	store, err := offsite.New(srv.Offsite)
+	if err != nil {
+		a.rememberOffsite(srv.ID, false, err.Error())
+
+		return map[string]any{"ok": false, "error": err.Error()}
+	}
+
+	/*
+	 * 🚨 A generous timeout, from a context of its own.
+	 *
+	 * The caller's context is the command's, and a command is expected to
+	 * answer within a poll window — but uploading several gigabytes over a
+	 * home connection legitimately takes much longer than that. Inheriting the
+	 * command's deadline would make off-site copies work in testing with a
+	 * small world and silently stop the moment one got real.
+	 *
+	 * Bounded rather than unbounded so a hung provider cannot pin a goroutine
+	 * and a file handle for ever.
+	 */
+	uploadCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 6*time.Hour)
+	defer cancel()
+
+	path := filepath.Join(cfg.Dir, b.ID)
+
+	if err := store.Put(uploadCtx, b.ID, path); err != nil {
+		a.rememberOffsite(srv.ID, false, err.Error())
+
+		return map[string]any{"ok": false, "error": err.Error()}
+	}
+
+	a.rememberOffsite(srv.ID, true, "")
+
+	out := map[string]any{"ok": true}
+
+	if pruned, perr := store.Prune(uploadCtx); perr != nil {
+		// Reported alongside a successful upload, because they are separate
+		// facts: the copy is safely off-site AND retention is not working.
+		out["pruneError"] = perr.Error()
+	} else if len(pruned) > 0 {
+		out["pruned"] = pruned
+	}
+
+	return out
+}
+
 // backupConfig builds a backup config from what the OPERATOR configured.
 func backupConfig(srv driver.Server) (backup.Config, error) {
 	if srv.BackupRoot == "" || len(srv.BackupPaths) == 0 {
@@ -460,6 +577,7 @@ func (a *Agent) StatusAll(ctx context.Context) []protocol.Status {
 		})
 
 		st.Backups = backupsFor(s)
+		st.Offsite = a.offsiteStatus(s)
 
 		out = append(out, st)
 	}

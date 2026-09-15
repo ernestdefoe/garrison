@@ -33,6 +33,9 @@ class Server extends AbstractModel
         'unready_since' => 'datetime',
         'last_remediation_at' => 'datetime',
         'backup_queued_at' => 'datetime',
+        'offsite_configured' => 'bool',
+        'offsite_last_ok' => 'bool',
+        'offsite_last_at' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];

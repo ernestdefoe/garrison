@@ -630,3 +630,25 @@
   font-style: italic;
   margin: 0 0 8px;
 }
+
+/*
+ * 🚨 Quiet by default. An operator with no off-site storage should learn it
+ * exists without being nagged about it every time they open the panel — but
+ * the one whose copies are FAILING needs to see that immediately, because the
+ * disaster it covers is the one where the local backups died with the disk.
+ */
+.GarrisonBackups-offsite {
+  color: var(--muted-color);
+  font-size: 12px;
+  margin: 0 0 10px;
+}
+
+.GarrisonBackups-offsite--bad {
+  border-inline-start: 3px solid var(--alert-error-color, #d14848);
+  color: inherit;
+  padding: 6px 10px;
+
+  strong {
+    display: block;
+  }
+}
