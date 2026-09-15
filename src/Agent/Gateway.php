@@ -203,6 +203,22 @@ class Gateway
             $server->stats_source = $stats['source'] ?? null;
         }
 
+        /**
+         * 🚨 Stored as the agent reported it, and NOT interpreted here.
+         * Deciding what to do about it is the ladder's job, on a schedule,
+         * with the history in front of it — a poll handler that also restarts
+         * servers would act on one reading, which is the single worst thing
+         * this feature could do.
+         */
+        if (isset($report['health']) && is_array($report['health'])) {
+            $health = $report['health'];
+            $server->health_state = (string) ($health['state'] ?? 'unknown');
+            $server->health_summary = $health['summary'] ?? null;
+            $server->health_checks = isset($health['results'])
+                ? json_encode($health['results'])
+                : null;
+        }
+
         $server->last_status_at = Carbon::now();
         $server->updated_at = Carbon::now();
         $server->save();

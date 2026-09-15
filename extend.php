@@ -7,6 +7,7 @@
 use ErnestDefoe\Garrison\Api\Controller\AgentPollController;
 use ErnestDefoe\Garrison\Api\Controller\ListServersController;
 use ErnestDefoe\Garrison\Api\Controller\QueueCommandController;
+use ErnestDefoe\Garrison\Console\HealthCommand;
 use ErnestDefoe\Garrison\Console\PairCommand;
 use ErnestDefoe\Garrison\GarrisonServiceProvider;
 use Flarum\Extend;
@@ -33,7 +34,18 @@ $extenders = [
          */
         ->route('/garrison', 'garrison'),
 
-    (new Extend\Console())->command(PairCommand::class),
+    (new Extend\Console())
+        ->command(PairCommand::class)
+        ->command(HealthCommand::class)
+
+        /*
+         * 🚨 Every minute, not every five. The whole argument for this feature
+         * is the gap between a server breaking and somebody noticing — on the
+         * outage that prompted it, twenty hours. A ladder that needs three
+         * consecutive unready readings before acting already waits three
+         * minutes; a five-minute schedule would make that fifteen.
+         */
+        ->schedule(HealthCommand::class, fn ($event) => $event->everyMinute()->withoutOverlapping()),
 
     /*
      * 🚨 The agent's route is exempt from CSRF, through core's own extender.

@@ -13,10 +13,25 @@ class Server extends AbstractModel
 {
     protected $table = 'garrison_servers';
 
+    /**
+     * 🚨 EVERY datetime column belongs here, and a missing one is a fatal on
+     * whichever code path first calls a Carbon method on it.
+     *
+     * `last_remediation_at` was added to the schema and not to this list, so
+     * it came back as a string and `->gt()` on it killed the scheduled health
+     * command with exit 255 and no output. It survived three test runs because
+     * the column is NULL until the ladder acts once — the check that reads it
+     * is unreachable until then. The same shape as the missing `now()` helper
+     * earlier: correct-looking code on a path nothing had exercised yet.
+     */
     protected $casts = [
         'is_public' => 'bool',
+        'needs_attention' => 'bool',
+        'auto_remediate' => 'bool',
         'running_since' => 'datetime',
         'last_status_at' => 'datetime',
+        'unready_since' => 'datetime',
+        'last_remediation_at' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
