@@ -206,3 +206,116 @@
 .GarrisonAdmin-delivery--muted {
   border-inline-start-color: var(--muted-color);
 }
+
+/*
+ * Scheduled work.
+ */
+.GarrisonSchedules {
+  margin: 14px 0;
+}
+
+.GarrisonSchedules-head {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+
+  h4 {
+    font-size: 14px;
+    margin: 0;
+  }
+}
+
+.GarrisonSchedule {
+  border: 1px solid var(--control-bg);
+  border-radius: 4px;
+  margin-top: 10px;
+  padding: 10px 12px;
+}
+
+/*
+ * 🚨 A disabled schedule is DIMMED, not hidden and not removed.
+ *
+ * It is still configured, and somebody turned it off on purpose — most often
+ * for one night. Hiding it would mean the only way to find it again is to
+ * remember it existed.
+ */
+.GarrisonSchedule--off {
+  opacity: 0.6;
+}
+
+.GarrisonSchedule-top {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.GarrisonSchedule-spacer {
+  flex: 1 1 auto;
+}
+
+.GarrisonSchedule-kind {
+  width: auto;
+}
+
+.GarrisonSchedule-time {
+  /* Wide enough for a 12-hour clock with AM/PM, which some locales render. */
+  width: 130px;
+}
+
+.GarrisonSchedule-tz {
+  max-width: 200px;
+  width: auto;
+}
+
+.GarrisonSchedule-days {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 10px 0;
+}
+
+.GarrisonSchedule-day {
+  background: var(--control-bg);
+  border: 0;
+  border-radius: 4px;
+  color: var(--control-color);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 4px 10px;
+
+  &.is-on {
+    background: var(--primary-color);
+    color: #fff;
+  }
+}
+
+.GarrisonSchedule-warn {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+
+  .GarrisonAdmin-field {
+    flex: 1 1 220px;
+  }
+}
+
+.GarrisonSchedule-warnMinutes {
+  max-width: 110px;
+}
+
+/*
+ * 🚨 The row said in words, under the controls that set it. Seven toggles, a
+ * clock and a timezone are individually obvious and collectively easy to
+ * misread; one sentence is what an operator can check against what they meant.
+ */
+.GarrisonSchedule-summary {
+  color: var(--muted-color);
+  font-size: 12px;
+  margin: 8px 0 0;
+}
+
+.GarrisonSchedule-remove {
+  color: var(--muted-color);
+}

@@ -12,6 +12,7 @@ use ErnestDefoe\Garrison\Health\Ladder;
 use ErnestDefoe\Garrison\Notification\Alerts;
 use ErnestDefoe\Garrison\Notification\DeliveryCheck;
 use ErnestDefoe\Garrison\Notification\Webhooks;
+use ErnestDefoe\Garrison\Schedule\Runner;
 use Flarum\Foundation\AbstractServiceProvider;
 use Flarum\Locale\TranslatorInterface;
 use Illuminate\Contracts\Filesystem\Factory;
@@ -78,6 +79,13 @@ class GarrisonServiceProvider extends AbstractServiceProvider
             return new DeliveryCheck(
                 $container->make(Queue::class),
                 $container->make(SettingsRepositoryInterface::class)
+            );
+        });
+
+        $this->container->singleton(Runner::class, function ($container) {
+            return new Runner(
+                $container->make(Dispatcher::class),
+                $container->make(LoggerInterface::class)
             );
         });
 

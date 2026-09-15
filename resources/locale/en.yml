@@ -197,6 +197,42 @@ ernestdefoe-garrison:
       stalled_help: Garrison sends alerts as background jobs, and nothing on this forum has run one for a while — so a server going down would be recorded here and nobody would be told. This is usually a queue worker that has stopped; restarting it is the fix.
       last_ran: "Last confirmed {when}"
 
+    # 🚨 Day toggles and a clock, never a cron field. The operator most likely
+    # to want a nightly restart is the one least likely to write `0 5 * * *`
+    # correctly — and a cron expression that is subtly wrong does not error, it
+    # simply never fires while sitting in the panel looking configured.
+    schedules:
+      title: Scheduled
+      add: Add a schedule
+      none: Nothing scheduled. Add a nightly restart, a backup, or a message to players.
+      remove: Remove this schedule
+      remove_confirm: Remove this schedule?
+      kind:
+        restart: Restart
+        backup: Back up
+        console: Send to console
+      day:
+        mon: Mon
+        tue: Tue
+        wed: Wed
+        thu: Thu
+        fri: Fri
+        sat: Sat
+        sun: Sun
+      when:
+        every_day: every day
+        weekdays: weekdays
+      summary: "{what}, {when} at {time} ({zone})"
+      line: Command to send
+      line_placeholder: "say Server saving…"
+      # 🚨 This field is the difference between a restart and an outage.
+      # Players who are told finish what they are doing and log out; players
+      # who are not lose whatever they were in the middle of and blame the
+      # server.
+      warn: Warn players this many minutes beforehand
+      warn_line: What to tell them
+      warn_line_placeholder: "say Restarting in 15 minutes — finish up and log out"
+
     hosts: Game hosts
     no_hosts: No hosts paired yet. Give one a name and pair it, then put the token in that host's agent config.
     host_name_placeholder: A name for the host

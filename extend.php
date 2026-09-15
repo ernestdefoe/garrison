@@ -14,6 +14,7 @@ use ErnestDefoe\Garrison\Api\Resource\ServerResource;
 use ErnestDefoe\Garrison\Console\BackupCommand;
 use ErnestDefoe\Garrison\Console\HealthCommand;
 use ErnestDefoe\Garrison\Console\PairCommand;
+use ErnestDefoe\Garrison\Console\ScheduleCommand;
 use ErnestDefoe\Garrison\GarrisonServiceProvider;
 use ErnestDefoe\Garrison\Notification\ServerIncidentBlueprint;
 use Flarum\Extend;
@@ -59,6 +60,7 @@ $extenders = [
         ->command(PairCommand::class)
         ->command(HealthCommand::class)
         ->command(BackupCommand::class)
+        ->command(ScheduleCommand::class)
 
         /*
          * 🚨 Every minute, not every five. The whole argument for this feature
@@ -75,7 +77,18 @@ $extenders = [
          * once an hour drifts by up to an hour each time; checked often and
          * compared against when one was last QUEUED, it does not.
          */
-        ->schedule(BackupCommand::class, fn ($event) => $event->everyFifteenMinutes()->withoutOverlapping()),
+        ->schedule(BackupCommand::class, fn ($event) => $event->everyFifteenMinutes()->withoutOverlapping())
+
+        /*
+         * 🚨 Every minute, because these are CLOCK times somebody chose.
+         *
+         * An operator who set a restart for 05:00 means 05:00, and a
+         * five-minute schedule would fire it anywhere in a five-minute window
+         * — which is fine for a restart and wrong for the warning that has to
+         * land exactly fifteen minutes before one. The runner is cheap: one
+         * indexed query, and arithmetic on rows that are almost never due.
+         */
+        ->schedule(ScheduleCommand::class, fn ($event) => $event->everyMinute()->withoutOverlapping()),
 
     /*
      * 🚨 The agent's route is exempt from CSRF, through core's own extender.
@@ -123,7 +136,11 @@ $extenders = [
         ->delete('/garrison/admin/agents/{id}', 'garrison.admin.unpair', AdminController::class)
         ->patch('/garrison/admin/servers/{id}', 'garrison.admin.server', AdminController::class)
         ->post('/garrison/admin/servers/{id}/icon', 'garrison.admin.icon', AdminController::class)
-        ->post('/garrison/admin/servers/{id}/fetch-icon', 'garrison.admin.fetchIcon', AdminController::class),
+        ->post('/garrison/admin/servers/{id}/fetch-icon', 'garrison.admin.fetchIcon', AdminController::class)
+
+        ->post('/garrison/admin/servers/{id}/schedules', 'garrison.admin.scheduleCreate', AdminController::class)
+        ->patch('/garrison/admin/schedules/{id}', 'garrison.admin.scheduleUpdate', AdminController::class)
+        ->delete('/garrison/admin/schedules/{id}', 'garrison.admin.scheduleDelete', AdminController::class),
 
     /*
      * Four permissions, and console is separate from control on purpose.

@@ -1,5 +1,8 @@
 import app from 'flarum/admin/app';
 import ExtensionPage from 'flarum/admin/components/ExtensionPage';
+
+import Schedules from './Schedules';
+import { extract } from '../text';
 import Button from 'flarum/common/components/Button';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import Switch from 'flarum/common/components/Switch';
@@ -263,6 +266,20 @@ export default class GarrisonPage extends ExtensionPage {
           <span className="GarrisonAdmin-meta">{this.t('backup_every_help')}</span>
         </div>
 
+        {/*
+          🚨 Below the backup interval, because the two are different answers
+          to the same question and an operator should see them together. "Every
+          6 hours" needs no clock and no timezone; "05:00 on weekdays" needs
+          both. Neither subsumes the other, and hiding one behind the other
+          would make somebody set up the wrong one and wonder why it never ran
+          when they expected.
+        */}
+        <Schedules
+          server={s}
+          schedules={this.state.schedules || []}
+          onchange={() => this.load()}
+        />
+
         <div className="GarrisonAdmin-toggles">
           {Switch.component(
             {
@@ -512,11 +529,3 @@ export default class GarrisonPage extends ExtensionPage {
   }
 }
 
-/** Flatten a translator result for confirm(). */
-function extract(value) {
-  if (typeof value === 'string') return value;
-  if (Array.isArray(value)) return value.map(extract).join('');
-  if (value && value.children) return extract(value.children);
-  if (value && value.text) return value.text;
-  return '';
-}

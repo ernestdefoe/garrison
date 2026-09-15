@@ -1,8 +1,15 @@
 {
     "name": "ernestdefoe/garrison",
-    "description": "Garrison — run your game servers from the forum the players already live in. Any server you can install, with or without Docker.",
+    "description": "Garrison \u2014 run your game servers from the forum the players already live in. Any server you can install, with or without Docker.",
     "type": "flarum-extension",
-    "keywords": ["flarum", "game", "server", "minecraft", "valheim", "panel"],
+    "keywords": [
+        "flarum",
+        "game",
+        "server",
+        "minecraft",
+        "valheim",
+        "panel"
+    ],
     "license": "proprietary",
     "authors": [
         {
@@ -34,5 +41,18 @@
                 "ernestdefoe/page-builder"
             ]
         }
-    }
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^11.0|^12.0"
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "ErnestDefoe\\Garrison\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit"
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
 }
