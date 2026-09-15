@@ -382,3 +382,43 @@
   font-family: var(--code-font, monospace);
   font-size: 11px;
 }
+
+/* ---------- console ---------- */
+
+.GarrisonCard-console {
+  border-top: 1px solid var(--control-bg);
+  padding-top: 8px;
+}
+
+.GarrisonConsole-out {
+  background: var(--code-bg, rgba(0, 0, 0, 0.25));
+  border-radius: 4px;
+  font-family: var(--code-font, monospace);
+  font-size: 12px;
+  line-height: 1.5;
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 8px 10px;
+  // Long lines wrap rather than scrolling sideways: a console you have to
+  // scroll horizontally is a console nobody reads.
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.GarrisonConsole-line.is-stderr {
+  // 🚨 Tinted, not red. A Java server writes most of its normal output to
+  // stderr; painting all of it as an error would make every healthy Minecraft
+  // console look like a disaster.
+  color: var(--warning-color, #d4a02e);
+}
+
+.GarrisonConsole-empty {
+  color: var(--muted-color);
+  margin: 0;
+}
+
+.GarrisonConsole-send {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}

@@ -37,6 +37,10 @@ ernestdefoe-garrison:
     join: How to join
     join_code: "Join code {code}"
     action_failed: That did not work. Try again in a moment.
+    console: Console
+    console_empty: Nothing here yet. Output appears as the server produces it.
+    console_placeholder: Type a command for the server
+    console_send: Send
     confirm_stop: "Stop {name}? Anybody playing will be disconnected."
 
     health:

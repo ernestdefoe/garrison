@@ -50,6 +50,8 @@ class AgentPollController implements RequestHandlerInterface
             }
         }
 
+        $this->gateway->recordConsole($agent, (array) ($body['console'] ?? []));
+
         foreach ((array) ($body['results'] ?? []) as $result) {
             if (! is_array($result) || ! isset($result['id'])) {
                 continue;

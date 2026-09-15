@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Garrison\Console;
 
+use ErnestDefoe\Garrison\Agent\Gateway;
 use ErnestDefoe\Garrison\Game\Artwork;
 use ErnestDefoe\Garrison\Health\Ladder;
 use ErnestDefoe\Garrison\Model\Server;
@@ -20,7 +21,8 @@ class HealthCommand extends AbstractCommand
 {
     public function __construct(
         protected Ladder $ladder,
-        protected Artwork $artwork
+        protected Artwork $artwork,
+        protected Gateway $gateway
     ) {
         parent::__construct();
     }
@@ -71,6 +73,23 @@ class HealthCommand extends AbstractCommand
 
         if ($got > 0) {
             $this->info('fetched artwork for ' . $got . ' server(s)');
+        }
+
+        /**
+         * 🚨 Pruned here rather than never. The console table grows forever
+         * otherwise — a busy server at a few hundred lines a minute is tens of
+         * millions of rows a year, which eventually makes the FORUM's own
+         * backups fail, for output nobody will ever read.
+         *
+         * Once an hour is plenty, and cheap to decide: the tick runs every
+         * minute, so this is the minute-zero one.
+         */
+        if ((int) date('i') === 0) {
+            $pruned = $this->gateway->pruneConsole();
+
+            if ($pruned > 0) {
+                $this->info('pruned ' . $pruned . ' old console line(s)');
+            }
         }
 
         if ($acted === 0 && $got === 0) {

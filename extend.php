@@ -6,6 +6,7 @@
 
 use ErnestDefoe\Garrison\Api\Controller\AdminController;
 use ErnestDefoe\Garrison\Api\Controller\AgentPollController;
+use ErnestDefoe\Garrison\Api\Controller\ConsoleController;
 use ErnestDefoe\Garrison\Api\Controller\ListServersController;
 use ErnestDefoe\Garrison\Api\Controller\QueueCommandController;
 use ErnestDefoe\Garrison\Console\HealthCommand;
@@ -78,6 +79,7 @@ $extenders = [
 
         ->get('/garrison/servers', 'garrison.servers', ListServersController::class)
         ->post('/garrison/servers/{id}/command', 'garrison.command', QueueCommandController::class)
+        ->get('/garrison/servers/{id}/console', 'garrison.console', ConsoleController::class)
 
         /*
          * Admin. Every one of these resolves the same controller, which

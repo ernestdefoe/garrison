@@ -6,6 +6,7 @@ use ErnestDefoe\Garrison\Agent\Dispatcher;
 use ErnestDefoe\Garrison\Agent\Gateway;
 use ErnestDefoe\Garrison\Agent\TokenGuard;
 use ErnestDefoe\Garrison\Api\Controller\AdminController;
+use ErnestDefoe\Garrison\Api\Controller\ConsoleController;
 use ErnestDefoe\Garrison\Game\Artwork;
 use ErnestDefoe\Garrison\Health\Ladder;
 use Flarum\Foundation\AbstractServiceProvider;
@@ -42,6 +43,10 @@ class GarrisonServiceProvider extends AbstractServiceProvider
 
         $this->container->singleton(Ladder::class, function ($container) {
             return new Ladder($container->make(Dispatcher::class));
+        });
+
+        $this->container->singleton(ConsoleController::class, function ($container) {
+            return new ConsoleController($container->make(ConnectionInterface::class));
         });
 
         $this->container->singleton(Artwork::class, function ($container) {

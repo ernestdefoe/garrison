@@ -244,6 +244,78 @@ class Gateway
     }
 
     /**
+     * Store console output the agent shipped.
+     *
+     * @param array<int, mixed> $lines
+     */
+    public function recordConsole(GarrisonAgent $agent, array $lines): void
+    {
+        if ($lines === []) {
+            return;
+        }
+
+        $rows = [];
+
+        foreach ($lines as $line) {
+            if (! is_array($line) || ! isset($line['server'], $line['text'])) {
+                continue;
+            }
+
+            $at = Carbon::now();
+
+            if (! empty($line['at'])) {
+                try {
+                    $parsed = Carbon::parse($line['at']);
+
+                    // 🚨 Same guard as running_since: a zero time from the far
+                    // end parses cleanly and would file a console line under
+                    // the year 1, where nothing will ever find it again.
+                    if ($parsed->year > 2000) {
+                        $at = $parsed;
+                    }
+                } catch (\Throwable) {
+                    // Keep the line, lose the timestamp. Output with an
+                    // approximate time beats no output.
+                }
+            }
+
+            $rows[] = [
+                'agent_id' => $agent->id,
+                'server_ref' => (string) $line['server'],
+                'at' => $at,
+                // 🚨 Truncated, not rejected. A single enormous line — a stack
+                // trace, a base64 blob a mod decided to log — must not fail the
+                // whole insert and lose every other line in the batch with it.
+                'text' => mb_substr((string) $line['text'], 0, 4000),
+                'stderr' => ! empty($line['stderr']),
+            ];
+        }
+
+        if ($rows === []) {
+            return;
+        }
+
+        // One insert for the batch: a row-at-a-time loop turns a chatty server
+        // into hundreds of queries per poll.
+        $this->db->table('garrison_console')->insert($rows);
+    }
+
+    /**
+     * Drop console output older than the retention window.
+     *
+     * 🚨 Pruned on a schedule, because this table grows forever otherwise. A
+     * busy server producing a few hundred lines a minute is tens of millions
+     * of rows a year — a table that eventually makes the forum's own backups
+     * fail, for output nobody will ever read.
+     */
+    public function pruneConsole(int $keepHours = 48): int
+    {
+        return $this->db->table('garrison_console')
+            ->where('at', '<', Carbon::now()->subHours($keepHours))
+            ->delete();
+    }
+
+    /**
      * Mark the agent alive and record what it says it can do.
      */
     public function touch(GarrisonAgent $agent, array $info = []): void

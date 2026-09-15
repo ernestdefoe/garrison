@@ -1,9 +1,11 @@
 import app from 'flarum/forum/app';
 import Page from 'flarum/common/components/Page';
 import IndexPage from 'flarum/forum/components/IndexPage';
+import Button from 'flarum/common/components/Button';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import humanTime from 'flarum/common/helpers/humanTime';
 
+import Console from './Console';
 import ServerControls from './ServerControls';
 import { serverMark } from '../marks';
 import { all, isLoaded, lastError, subscribe } from '../store';
@@ -21,6 +23,7 @@ export default class ServersPage extends Page {
   oninit(vnode) {
     super.oninit(vnode);
     this.unsubscribe = null;
+    this.openConsole = null;
     app.history.push('garrison', app.translator.trans('ernestdefoe-garrison.forum.title'));
   }
 
@@ -121,6 +124,24 @@ export default class ServersPage extends Page {
           {this.fact('uptime', running && s.runningSince ? humanTime(s.runningSince) : null)}
           {this.fact('driver', s.driver)}
         </dl>
+
+        {s.canConsole ? (
+          <div className="GarrisonCard-console">
+            {Button.component(
+              {
+                className: 'Button Button--link GarrisonCard-consoleToggle',
+                icon: this.openConsole === s.id ? 'fas fa-caret-down' : 'fas fa-caret-right',
+                onclick: () => {
+                  // Closing unmounts the component, which stops its polling —
+                  // see Console.onremove. One console open at a time.
+                  this.openConsole = this.openConsole === s.id ? null : s.id;
+                },
+              },
+              app.translator.trans('ernestdefoe-garrison.forum.console')
+            )}
+            {this.openConsole === s.id ? <Console server={s} /> : null}
+          </div>
+        ) : null}
 
         {s.joinAddress || s.joinCode ? (
           <div className="GarrisonCard-join">

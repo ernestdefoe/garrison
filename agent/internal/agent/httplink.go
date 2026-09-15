@@ -41,6 +41,8 @@ type HTTPLink struct {
 	mu      sync.Mutex
 	results []result
 	events  []protocol.Event
+
+	console *consoleShipper
 }
 
 type result struct {
@@ -56,6 +58,10 @@ type pollRequest struct {
 	Servers []protocol.Status  `json:"servers"`
 	Results []result           `json:"results,omitempty"`
 	Events  []protocol.Event   `json:"events,omitempty"`
+
+	// Console output since the last poll, for every server. Shipped
+	// continuously rather than on subscription — see console.go.
+	Console []protocol.Line `json:"console,omitempty"`
 }
 
 type pollCommand struct {
@@ -73,10 +79,11 @@ type pollResponse struct {
 // NewHTTPLink builds the polling link. url is the forum's poll endpoint.
 func NewHTTPLink(url, token string, a *Agent, log *slog.Logger) *HTTPLink {
 	return &HTTPLink{
-		url:   url,
-		token: token,
-		agent: a,
-		log:   log,
+		url:     url,
+		token:   token,
+		agent:   a,
+		log:     log,
+		console: newConsoleShipper(),
 		client: &http.Client{
 			// 🚨 Longer than the forum's poll window, and by a margin. A
 			// client timeout shorter than the server's hold turns every idle
@@ -140,6 +147,7 @@ func (l *HTTPLink) once(ctx context.Context) (int, error) {
 			Drivers: l.agent.Drivers(),
 		},
 		Servers: l.agent.StatusAll(ctx),
+		Console: l.console.collect(ctx, l.agent),
 	}
 
 	l.mu.Lock()
@@ -189,6 +197,19 @@ func (l *HTTPLink) once(ctx context.Context) (int, error) {
 
 	for _, c := range out.Commands {
 		l.run(ctx, c)
+
+		/*
+		 * 🚨 After a restart, forget what console output was already shipped.
+		 *
+		 * The lines worth reading are the ones explaining why the server went
+		 * down, and they are exactly the ones the shipper would skip as
+		 * already seen — a restart replaces the log, so "the last line I sent"
+		 * no longer appears in it and the whole window reads as new anyway.
+		 * Forgetting makes that explicit rather than accidental.
+		 */
+		if c.Verb == protocol.VerbRestart || c.Verb == protocol.VerbStart {
+			l.console.forget(c.Server)
+		}
 	}
 
 	return len(out.Commands), nil
