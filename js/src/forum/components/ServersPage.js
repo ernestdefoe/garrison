@@ -82,7 +82,7 @@ export default class ServersPage extends Page {
       <li className={'GarrisonCard' + (stale ? ' GarrisonCard--stale' : '')} key={s.id}>
         <div className="GarrisonCard-head">
           <span className={`GarrisonServer-state GarrisonServer-state--${s.state}`} aria-hidden="true" />
-          <span className="GarrisonCard-mark">{serverMark(s, 22)}</span>
+          <span className="GarrisonCard-mark">{serverMark(s, 26)}</span>
           <h3 className="GarrisonCard-name">{s.name}</h3>
           <span className="GarrisonCard-state">
             {app.translator.trans(`ernestdefoe-garrison.forum.state.${s.state}`)}

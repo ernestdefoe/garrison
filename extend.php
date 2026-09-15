@@ -4,6 +4,7 @@
  * Garrison — run your game servers from the forum the players already live in.
  */
 
+use ErnestDefoe\Garrison\Api\Controller\AdminController;
 use ErnestDefoe\Garrison\Api\Controller\AgentPollController;
 use ErnestDefoe\Garrison\Api\Controller\ListServersController;
 use ErnestDefoe\Garrison\Api\Controller\QueueCommandController;
@@ -16,6 +17,10 @@ $extenders = [
     (new Extend\ServiceProvider())->register(GarrisonServiceProvider::class),
 
     (new Extend\Locales(__DIR__ . '/resources/locale')),
+
+    (new Extend\Frontend('admin'))
+        ->js(__DIR__ . '/js/dist/admin.js')
+        ->css(__DIR__ . '/less/admin.less'),
 
     (new Extend\Frontend('forum'))
         ->js(__DIR__ . '/js/dist/forum.js')
@@ -72,7 +77,19 @@ $extenders = [
         ->post('/garrison/agent/poll', 'garrison.agent.poll', AgentPollController::class)
 
         ->get('/garrison/servers', 'garrison.servers', ListServersController::class)
-        ->post('/garrison/servers/{id}/command', 'garrison.command', QueueCommandController::class),
+        ->post('/garrison/servers/{id}/command', 'garrison.command', QueueCommandController::class)
+
+        /*
+         * Admin. Every one of these resolves the same controller, which
+         * asserts `garrison.manage` before it looks at the route name — so
+         * there is no path into any of them that skips the check.
+         */
+        ->get('/garrison/admin/state', 'garrison.admin.state', AdminController::class)
+        ->post('/garrison/admin/agents', 'garrison.admin.pair', AdminController::class)
+        ->delete('/garrison/admin/agents/{id}', 'garrison.admin.unpair', AdminController::class)
+        ->patch('/garrison/admin/servers/{id}', 'garrison.admin.server', AdminController::class)
+        ->post('/garrison/admin/servers/{id}/icon', 'garrison.admin.icon', AdminController::class)
+        ->post('/garrison/admin/servers/{id}/fetch-icon', 'garrison.admin.fetchIcon', AdminController::class),
 
     /*
      * Four permissions, and console is separate from control on purpose.

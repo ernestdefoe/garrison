@@ -1,0 +1,157 @@
+
+/* ---------- admin ---------- */
+
+.GarrisonAdmin-section {
+  margin-bottom: 30px;
+}
+
+.GarrisonAdmin-pair {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  max-width: 480px;
+}
+
+.GarrisonAdmin-list,
+.GarrisonAdmin-incidents {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.GarrisonAdmin-host,
+.GarrisonAdmin-server,
+.GarrisonAdmin-incident {
+  border: 1px solid var(--control-bg);
+  border-radius: 6px;
+  margin-bottom: 10px;
+  padding: 12px 14px;
+}
+
+.GarrisonAdmin-host {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.GarrisonAdmin-meta {
+  color: var(--muted-color);
+  display: block;
+  font-size: 12px;
+}
+
+.GarrisonAdmin-fields {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  margin: 12px 0;
+}
+
+.GarrisonAdmin-field label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.GarrisonAdmin-toggles {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.GarrisonAdmin-icon {
+  border-top: 1px solid var(--control-bg);
+  margin-top: 12px;
+  padding-top: 12px;
+}
+
+.GarrisonAdmin-iconLabel {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+
+  img {
+    border-radius: 4px;
+    object-fit: contain;
+  }
+}
+
+/*
+ * 🚨 Loud. This is the state where Garrison gave up and a person has to act;
+ * a quiet grey note is how it gets scrolled past for a week.
+ */
+.GarrisonAdmin-attention {
+  align-items: center;
+  background: var(--alert-warning-bg, #a9750d);
+  border-radius: 4px;
+  color: var(--alert-warning-color, #fff);
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  padding: 8px 10px;
+}
+
+.GarrisonAdmin-token {
+  margin-bottom: 20px;
+}
+
+.GarrisonAdmin-tokenValue {
+  display: block;
+  font-size: 13px;
+  margin: 8px 0;
+  // The whole point is to select and copy it.
+  user-select: all;
+  word-break: break-all;
+}
+
+.GarrisonAdmin-incidentCause {
+  font-size: 14px;
+  margin: 4px 0;
+}
+
+.GarrisonAdmin-incidentActions {
+  color: var(--muted-color);
+  font-size: 12px;
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+
+.GarrisonAdmin-incident.is-abandoned {
+  border-color: var(--alert-warning-bg, #a9750d);
+}
+
+.GarrisonAdmin-empty {
+  color: var(--muted-color);
+}
+
+.GarrisonAdmin-iconRow {
+  align-items: center;
+  display: flex;
+  gap: 14px;
+}
+
+.GarrisonAdmin-iconPreview {
+  background: var(--control-bg);
+  border-radius: 4px;
+  max-height: 48px;
+  max-width: 140px;
+  object-fit: contain;
+  padding: 4px;
+}
+
+.GarrisonAdmin-iconActions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.GarrisonAdmin-iconLabel {
+  align-items: center;
+  display: flex;
+  font-weight: 400;
+  gap: 8px;
+  margin: 0;
+}

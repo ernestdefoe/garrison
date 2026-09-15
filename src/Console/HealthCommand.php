@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Garrison\Console;
 
+use ErnestDefoe\Garrison\Game\Artwork;
 use ErnestDefoe\Garrison\Health\Ladder;
 use ErnestDefoe\Garrison\Model\Server;
 use Flarum\Console\AbstractCommand;
@@ -18,7 +19,8 @@ use Flarum\User\User;
 class HealthCommand extends AbstractCommand
 {
     public function __construct(
-        protected Ladder $ladder
+        protected Ladder $ladder,
+        protected Artwork $artwork
     ) {
         parent::__construct();
     }
@@ -58,7 +60,20 @@ class HealthCommand extends AbstractCommand
             }
         });
 
-        if ($acted === 0) {
+        /**
+         * 🚨 Artwork rides on the same tick rather than having its own
+         * schedule. A server that reports a known game gets its logo without
+         * anybody finding a button — which is how every other game panel
+         * behaves, and what an operator expects. Bounded by icon_attempts so a
+         * game whose artwork 404s is not fetched every minute for ever.
+         */
+        $got = $this->artwork->backfill();
+
+        if ($got > 0) {
+            $this->info('fetched artwork for ' . $got . ' server(s)');
+        }
+
+        if ($acted === 0 && $got === 0) {
             $this->info('Nothing to do.');
         }
 

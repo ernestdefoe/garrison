@@ -4,6 +4,12 @@ ernestdefoe-garrison:
     errors:
       unknown_verb: That is not something Garrison can ask a server to do.
       not_permitted: You do not have permission to do that to this server.
+      name_required: Give the host a name.
+      upload_failed: That file did not arrive. Try again.
+      not_an_image: That is not an image Garrison can use. PNG, JPEG, GIF or WebP.
+      too_large: That image is over 512 KB. Use a smaller one.
+      no_artwork: Garrison does not know where to find artwork for this game. Upload an image instead.
+      fetch_failed: Could not fetch the logo. Upload one instead.
 
   forum:
     # 🚨 Every user-facing string lives here. Zero hardcoded English anywhere
@@ -17,6 +23,7 @@ ernestdefoe-garrison:
       crashed: Crashed
       unknown: Unknown
     stale: "Last heard from {when}"
+    stale_short: Not reporting
     players: "{count, plural, one {# player} other {# players}} online"
     no_servers: No game servers are set up yet.
     unreachable: Could not reach the forum for server status.
@@ -50,6 +57,39 @@ ernestdefoe-garrison:
 
   admin:
     title: Garrison
+    load_failed: Could not load Garrison's state.
+
+    hosts: Game hosts
+    no_hosts: No hosts paired yet. Give one a name and pair it, then put the token in that host's agent config.
+    host_name_placeholder: A name for the host
+    pair: Pair a host
+    unpair: Unpair
+    unpair_confirm: "Unpair {name}? Its {count} server(s) will disappear from the forum until it is paired again."
+    host_seen: "Last heard from {when}"
+    host_late: "⚠ Silent since {when}"
+    host_never: Has never checked in
+
+    token_heading: "{name} is paired"
+    token_once: This token is shown once and is stored nowhere. Copy it now — if you lose it you will have to unpair and pair again.
+    token_next: Put it in the host's agent config as the token, then start the agent.
+    token_copied: I have copied it
+
+    servers: Servers
+    field_name: Name
+    field_join_address: Address
+    field_join_password: Password
+    field_join_code: Join code
+    public: Show this server to everyone, including guests
+    auto_remediate: Restart this server automatically when it stops accepting players
+    attention: Garrison stopped trying to restart this server. It needs looking at.
+    clear_attention: I have looked — resume automatic restarts
+    icon: Server image
+    icon_help: PNG, JPEG, GIF or WebP, up to 512 KB. Uploaded and kept here, so it cannot disappear later.
+    fetch_logo: Fetch the real logo
+    fetch_logo_help: Downloads the game's own logo and keeps a copy on this forum. Not a hotlink — it cannot break later.
+
+    incidents: Recent incidents
+    no_incidents: Nothing has gone wrong yet.
 
     permissions:
       # 🚨 Worded so the grid says what each one actually does. "View game

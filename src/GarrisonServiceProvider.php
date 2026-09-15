@@ -5,9 +5,12 @@ namespace ErnestDefoe\Garrison;
 use ErnestDefoe\Garrison\Agent\Dispatcher;
 use ErnestDefoe\Garrison\Agent\Gateway;
 use ErnestDefoe\Garrison\Agent\TokenGuard;
+use ErnestDefoe\Garrison\Api\Controller\AdminController;
+use ErnestDefoe\Garrison\Game\Artwork;
 use ErnestDefoe\Garrison\Health\Ladder;
 use Flarum\Foundation\AbstractServiceProvider;
 use Flarum\Locale\TranslatorInterface;
+use Illuminate\Contracts\Filesystem\Factory;
 use Illuminate\Database\ConnectionInterface;
 
 /**
@@ -39,6 +42,18 @@ class GarrisonServiceProvider extends AbstractServiceProvider
 
         $this->container->singleton(Ladder::class, function ($container) {
             return new Ladder($container->make(Dispatcher::class));
+        });
+
+        $this->container->singleton(Artwork::class, function ($container) {
+            return new Artwork($container->make(Factory::class));
+        });
+
+        $this->container->singleton(AdminController::class, function ($container) {
+            return new AdminController(
+                $container->make(TranslatorInterface::class),
+                $container->make(Factory::class),
+                $container->make(Artwork::class)
+            );
         });
     }
 }

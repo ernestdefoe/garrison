@@ -22,6 +22,13 @@
   display: flex;
   gap: 8px;
   font-size: 14px;
+
+  // The sidebar has one line per server, so a wide wordmark is capped to
+  // something that still leaves the name readable.
+  .GarrisonMark--custom {
+    max-height: 18px;
+    max-width: 48px;
+  }
 }
 
 .GarrisonServer-name {
@@ -33,11 +40,30 @@
   white-space: nowrap;
 }
 
+/*
+ * 🚨 The NAME gets the room, and the detail shrinks.
+ *
+ * With `flex: none` on the detail and `1 1 auto` on the name, a long status
+ * message won the whole row and truncated the server's name to two letters.
+ * In a sidebar the name is the thing somebody is scanning for — everything
+ * else is secondary and must give way first.
+ */
 .GarrisonServer-players {
   color: var(--muted-color);
-  flex: none;
-  font-size: 13px;
+  flex: 0 1 auto;
+  font-size: 12px;
   font-variant-numeric: tabular-nums;
+  min-width: 0;
+  overflow: hidden;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.GarrisonServer-name {
+  // Never below this, or the mark and the status squeeze it to an ellipsis.
+  flex: 1 1 auto;
+  min-width: 7em;
 }
 
 /*
@@ -208,10 +234,18 @@
 }
 
 .GarrisonMark--custom {
-  // An operator's own image is whatever shape they uploaded; contain it rather
-  // than letting a wide logo stretch the row.
+  /*
+   * 🚨 A real game logo is a WIDE wordmark, not a square icon — Steam's are
+   * typically 640x360 with transparent margins. Forcing one into a 16px box
+   * makes it an unreadable smudge, which is worse than the glyph it replaced.
+   * So a custom image gets width to be legible and is contained, never
+   * cropped: a logo with its edges cut off looks like a broken asset.
+   */
   border-radius: 3px;
+  height: auto;
+  max-height: 100%;
   object-fit: contain;
+  width: auto;
 }
 
 .GarrisonMark--monogram {
@@ -232,11 +266,22 @@
   align-items: center;
   display: inline-flex;
   flex: none;
+  height: 38px;
+
+  /*
+   * A game's wordmark is the fastest way to know what a server IS, so it gets
+   * real room — this is identity, not a bullet point. Contained rather than
+   * cropped: a logo with its edges cut off reads as a broken asset.
+   */
+  .GarrisonMark--custom {
+    max-height: 38px;
+    max-width: 150px;
+  }
 
   .GarrisonMark--monogram {
-    font-size: 12px;
-    height: 22px;
-    width: 22px;
+    font-size: 13px;
+    height: 26px;
+    width: 26px;
   }
 }
 

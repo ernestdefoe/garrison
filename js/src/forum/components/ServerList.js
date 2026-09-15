@@ -78,18 +78,27 @@ export default class ServerList extends Component {
           className={`GarrisonServer-state GarrisonServer-state--${s.state}`}
           aria-hidden="true"
         />
-        {serverMark(s, 15)}
-        <span className="GarrisonServer-name">{s.name}</span>
+        {serverMark(s, 18)}
+        <span className="GarrisonServer-name" title={s.name}>
+          {s.name}
+        </span>
         <span className="GarrisonServer-players">{this.detail(s, stale)}</span>
       </li>
     );
   }
 
   detail(s, stale) {
+    /*
+     * 🚨 The SHORT form here, and the long one only on the page.
+     *
+     * "Last heard from 37 minutes ago" is eleven words in a 240px sidebar
+     * column: it pushed the server's own name down to "Sh…" and "Ba…", which
+     * made the widget useless and made the game marks look like they were not
+     * rendering at all. The name is the thing somebody is looking for; the
+     * detail belongs where there is room for it.
+     */
     if (stale && s.lastStatusAt) {
-      return app.translator.trans('ernestdefoe-garrison.forum.stale', {
-        when: humanTime(s.lastStatusAt),
-      });
+      return app.translator.trans('ernestdefoe-garrison.forum.stale_short');
     }
 
     // 🚨 In a widget there is room for one word, so it goes to the worst true
