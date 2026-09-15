@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Garrison\Model;
 
+use Carbon\Carbon;
 use Flarum\Database\AbstractModel;
 use Flarum\User\User;
 
@@ -57,12 +58,20 @@ class Server extends AbstractModel
      * displaying a twenty-minute-old "running" is how an outage goes unnoticed
      * for twenty hours.
      */
+    /**
+     * 🚨 Carbon::now(), not now(). `now()` is one of Laravel's global helper
+     * functions and Flarum does not load them, so an unqualified call resolves
+     * against this namespace, finds nothing, and fatals — but only on the code
+     * path that calls it. The extension installed, migrated, paired and ran a
+     * real agent before this was hit, because nothing reached isStale() until
+     * a browser asked for the server list.
+     */
     public function isStale(): bool
     {
         if ($this->last_status_at === null) {
             return true;
         }
 
-        return $this->last_status_at->lt(now()->subSeconds(90));
+        return $this->last_status_at->lt(Carbon::now()->subSeconds(90));
     }
 }

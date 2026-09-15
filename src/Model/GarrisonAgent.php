@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Garrison\Model;
 
+use Carbon\Carbon;
 use Flarum\Database\AbstractModel;
 
 /**
@@ -37,7 +38,7 @@ class GarrisonAgent extends AbstractModel
             return true;
         }
 
-        return $this->last_seen_at->lt(now()->subSeconds(90));
+        return $this->last_seen_at->lt(Carbon::now()->subSeconds(90));
     }
 
     public function driverList(): array
