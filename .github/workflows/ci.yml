@@ -57,3 +57,19 @@ jobs:
       # cheap to check on every push and expensive to find any other way.
       - name: No raw SQL without the table prefix
         run: python3 tools/check-table-prefix.py .
+
+      # 🚨 A duplicate key in a locale file makes Symfony's YAML parser throw,
+      # and Flarum loads every extension's locale on boot — so it 500s /api for
+      # every user of the forum, not just this extension's pages. It happened
+      # twice in one afternoon: both times the parent already had a key with
+      # the obvious name, several hundred lines away.
+      - name: No duplicate locale keys
+        run: python3 tools/check-locale.py
+
+      # The date arithmetic that decides whether somebody's server restarts
+      # tonight, and the session maths behind every playtime total. No
+      # database, milliseconds, so there is no excuse for skipping it.
+      - name: Unit tests
+        run: |
+          composer install --no-interaction --no-progress
+          vendor/bin/phpunit

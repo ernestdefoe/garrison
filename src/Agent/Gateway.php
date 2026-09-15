@@ -6,6 +6,7 @@ use Carbon\Carbon;
 use ErnestDefoe\Garrison\Model\Command;
 use ErnestDefoe\Garrison\Model\GarrisonAgent;
 use ErnestDefoe\Garrison\Model\Server;
+use ErnestDefoe\Garrison\Players\Tracker;
 use Illuminate\Database\ConnectionInterface;
 
 /**
@@ -50,7 +51,8 @@ class Gateway
     public const POLL_TICK_MS = 400;
 
     public function __construct(
-        protected ConnectionInterface $db
+        protected ConnectionInterface $db,
+        protected Tracker $tracker
     ) {
     }
 
@@ -303,9 +305,35 @@ class Gateway
             $server->offsite_last_error = null;
         }
 
+        /**
+         * 🚨 Who is playing, and the difference between "nobody" and "this
+         * server does not say".
+         *
+         * They look identical in an empty list and mean opposite things on a
+         * panel: one is an empty game, the other is a feature nobody turned on.
+         * Showing "0 players" for the second is a quiet lie that makes an
+         * operator think their server is dead.
+         */
+        $known = ! empty($report['playersKnown']);
+        $online = $known ? array_values((array) ($report['players'] ?? [])) : null;
+
+        $server->players_known = $known;
+        $server->players_online_names = $known ? json_encode($online) : null;
+
         $server->last_status_at = Carbon::now();
         $server->updated_at = Carbon::now();
         $server->save();
+
+        /*
+         * 🚨 Sessions are reconciled AFTER the save, and outside it.
+         *
+         * The tracker writes its own rows, and doing that before the server
+         * row is saved would leave a session pointing at a server whose state
+         * the forum has not yet recorded — the two would disagree for the
+         * length of one request, which is exactly long enough for a page load
+         * to catch it.
+         */
+        $this->tracker->sync($server, $online);
     }
 
     /**

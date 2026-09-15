@@ -14,6 +14,7 @@ import (
 	"github.com/ernestdefoe/garrison/internal/driver"
 	"github.com/ernestdefoe/garrison/internal/health"
 	"github.com/ernestdefoe/garrison/internal/offsite"
+	"github.com/ernestdefoe/garrison/internal/players"
 	"github.com/ernestdefoe/garrison/internal/protocol"
 	"github.com/ernestdefoe/garrison/internal/settings"
 )
@@ -34,6 +35,21 @@ type Agent struct {
 	// asking the bucket on every poll. See OffsiteStatus for why.
 	offsiteMu   sync.Mutex
 	offsiteLast map[string]offsiteOutcome
+
+	// Who is in each game, read from its log. Nil for a server whose operator
+	// did not configure how to read them.
+	watchers map[string]*players.Watcher
+}
+
+/*
+watcher returns a server's player watcher, or nil.
+
+🚨 Built ONCE at startup rather than per poll, because the watcher IS the state:
+it holds the current set, and rebuilding it every poll would empty it every
+fifteen seconds and report an empty game.
+*/
+func (a *Agent) watcher(serverID string) *players.Watcher {
+	return a.watchers[serverID]
 }
 
 // New builds an agent over the servers it is configured with, keeping only
@@ -44,12 +60,35 @@ func New(ctx context.Context, servers []driver.Server, candidates driver.Set) (*
 		drivers:     make(driver.Set),
 		streams:     make(map[string]context.CancelFunc),
 		offsiteLast: make(map[string]offsiteOutcome),
-	}
-	for _, s := range servers {
-		a.servers[s.ID] = s
+		watchers:    make(map[string]*players.Watcher),
 	}
 
 	var unavailable []string
+
+	for _, s := range servers {
+		a.servers[s.ID] = s
+
+		/*
+		 * 🚨 A bad player pattern must NOT stop the agent.
+		 *
+		 * The rest of this server still works — status, restarts, backups, the
+		 * console — and refusing to start over a typo in one optional regex
+		 * would take a whole host offline for a convenience feature. The
+		 * mistake is reported and that server simply reports no players, which
+		 * is what a server with no configuration does anyway.
+		 */
+		w, err := players.New(s.Players)
+		if err != nil {
+			unavailable = append(unavailable, fmt.Sprintf("players for %s: %v", s.ID, err))
+
+			continue
+		}
+
+		if w != nil {
+			a.watchers[s.ID] = w
+		}
+	}
+
 	for name, d := range candidates {
 		if err := d.Available(ctx); err != nil {
 			unavailable = append(unavailable, fmt.Sprintf("%s (%v)", name, err))
@@ -635,6 +674,25 @@ func (a *Agent) StatusAll(ctx context.Context) []protocol.Status {
 
 		st.Backups = backupsFor(s)
 		st.Offsite = a.offsiteStatus(s)
+
+		if w := a.watcher(s.ID); w != nil {
+			/*
+			 * 🚨 A server that is not running has NOBODY in it, and the set is
+			 * cleared rather than reported stale.
+			 *
+			 * The watcher's set is built from log lines, and a crashed server
+			 * prints no goodbyes — so without this, a crash leaves everybody
+			 * who was playing listed as still playing, on the panel somebody
+			 * opened precisely because the server went down. It would also
+			 * quietly inflate their playtime for as long as it stayed down.
+			 */
+			if st.State != protocol.StateRunning {
+				w.Reset()
+			}
+
+			st.Players = w.Online()
+			st.PlayersKnown = true
+		}
 
 		out = append(out, st)
 	}

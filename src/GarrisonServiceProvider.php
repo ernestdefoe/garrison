@@ -12,6 +12,7 @@ use ErnestDefoe\Garrison\Health\Ladder;
 use ErnestDefoe\Garrison\Notification\Alerts;
 use ErnestDefoe\Garrison\Health\Heartbeat;
 use ErnestDefoe\Garrison\Notification\Webhooks;
+use ErnestDefoe\Garrison\Players\Tracker;
 use ErnestDefoe\Garrison\Schedule\Runner;
 use Flarum\Foundation\AbstractServiceProvider;
 use Flarum\Locale\TranslatorInterface;
@@ -41,8 +42,15 @@ class GarrisonServiceProvider extends AbstractServiceProvider
             return new TokenGuard();
         });
 
+        $this->container->singleton(Tracker::class, function () {
+            return new Tracker();
+        });
+
         $this->container->singleton(Gateway::class, function ($container) {
-            return new Gateway($container->make(ConnectionInterface::class));
+            return new Gateway(
+                $container->make(ConnectionInterface::class),
+                $container->make(Tracker::class)
+            );
         });
 
         $this->container->singleton(Dispatcher::class, function ($container) {

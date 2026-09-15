@@ -298,6 +298,26 @@ type Status struct {
 	 */
 	Backups []Backup `json:"backups,omitempty"`
 
+	/*
+	 * Players is who is in the game right now, read from its log.
+	 *
+	 * 🚨 A SET, not a stream of events, and nil when the operator has not
+	 * configured how to read them — which is distinct from an empty slice
+	 * meaning "configured, and nobody is playing".
+	 *
+	 * Shipping the whole set every poll is what makes this self-correcting. An
+	 * events design ("alice joined", "alice left") never recovers from a
+	 * dropped poll, an agent restart or a log rotation: the forum would show
+	 * somebody in a game they left last Tuesday with no way to notice. Diffing
+	 * an authoritative set costs a few bytes and cannot drift.
+	 */
+	Players []string `json:"players,omitempty"`
+
+	// PlayersKnown distinguishes "nobody is playing" from "this server does not
+	// report players", which look identical in an empty list and mean opposite
+	// things on a panel.
+	PlayersKnown bool `json:"playersKnown,omitempty"`
+
 	// Offsite is what the agent knows about copies to remote storage. Nil when
 	// the operator has not configured any.
 	Offsite *OffsiteStatus `json:"offsite,omitempty"`

@@ -126,6 +126,7 @@ export default class ServerPage extends Page {
       </header>,
 
       this.health(s, running),
+      this.players(s, running),
       this.join(s),
       this.facts(s, running),
 
@@ -214,6 +215,48 @@ export default class ServerPage extends Page {
           </li>
         ))}
       </ul>
+    );
+  }
+
+  /**
+   * Who is in the game right now, by name.
+   *
+   * 🚨 The thing a forum can do that a standalone panel cannot. The people in
+   * this list are often the people reading the page, and "alice, bob and two
+   * others are on right now" is a reason to go and join them — which is the
+   * whole argument for a game panel living inside a community rather than
+   * beside one.
+   *
+   * 🚨 Rendered only when the server actually reports names. A server whose
+   * operator has not configured that gets nothing here, NOT an empty list: "no
+   * players online" for a busy server is worse than saying nothing at all.
+   */
+  players(s, running) {
+    if (!running || !s.playersNames) return null;
+
+    if (s.playersNames.length === 0) {
+      return (
+        <p className="GarrisonPlayers GarrisonPlayers--empty" key="players">
+          {app.translator.trans('ernestdefoe-garrison.forum.playing.nobody')}
+        </p>
+      );
+    }
+
+    return (
+      <div className="GarrisonPlayers" key="players">
+        <h3>
+          {app.translator.trans('ernestdefoe-garrison.forum.playing.title', {
+            count: s.playersNames.length,
+          })}
+        </h3>
+        <ul className="GarrisonPlayers-list">
+          {s.playersNames.map((name) => (
+            <li className="GarrisonPlayers-player" key={name}>
+              {name}
+            </li>
+          ))}
+        </ul>
+      </div>
     );
   }
 

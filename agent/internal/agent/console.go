@@ -78,14 +78,14 @@ func (c *consoleShipper) collect(ctx context.Context, a *Agent) []protocol.Line 
 			continue
 		}
 
-		lines := c.newFor(ctx, drv, s)
+		lines := c.newFor(ctx, a, drv, s)
 		out = append(out, lines...)
 	}
 
 	return out
 }
 
-func (c *consoleShipper) newFor(ctx context.Context, drv driver.Driver, s driver.Server) []protocol.Line {
+func (c *consoleShipper) newFor(ctx context.Context, a *Agent, drv driver.Driver, s driver.Server) []protocol.Line {
 	var all []protocol.Line
 
 	// Read a window rather than everything: the agent only needs to work out
@@ -112,6 +112,26 @@ func (c *consoleShipper) newFor(ctx context.Context, drv driver.Driver, s driver
 		}
 		// Not found means the log rotated or the server restarted, and
 		// everything visible is genuinely new.
+	}
+
+	/*
+	 * 🚨 The player watcher sees these lines HERE, before the cap below.
+	 *
+	 * The same read, used twice: the console panel gets a bounded window and
+	 * the watcher gets every new line. Reading the log a second time for
+	 * players would double the I/O on a busy server for output already in
+	 * memory — and, worse, the two reads could disagree, so the console would
+	 * show a join the player list did not have.
+	 *
+	 * Before the cap, because a server that produced more than MaxLinesPerServer
+	 * since the last poll drops its OLDEST console lines on purpose — and those
+	 * are exactly the ones most likely to carry a join that the player set must
+	 * not miss.
+	 */
+	if w := a.watcher(s.ID); w != nil {
+		for _, l := range fresh {
+			w.Observe(l.Text)
+		}
 	}
 
 	if len(fresh) == 0 {

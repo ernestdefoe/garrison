@@ -6,6 +6,7 @@ use ErnestDefoe\Garrison\Agent\Gateway;
 use ErnestDefoe\Garrison\Game\Artwork;
 use ErnestDefoe\Garrison\Health\Ladder;
 use ErnestDefoe\Garrison\Model\Server;
+use ErnestDefoe\Garrison\Players\Tracker;
 use ErnestDefoe\Garrison\Health\Heartbeat;
 use Flarum\Console\AbstractCommand;
 use Flarum\User\User;
@@ -24,7 +25,8 @@ class HealthCommand extends AbstractCommand
         protected Ladder $ladder,
         protected Artwork $artwork,
         protected Gateway $gateway,
-        protected Heartbeat $heartbeat
+        protected Heartbeat $heartbeat,
+        protected Tracker $tracker
     ) {
         parent::__construct();
     }
@@ -55,14 +57,38 @@ class HealthCommand extends AbstractCommand
 
         $acted = 0;
 
-        Server::query()->each(function (Server $server) use ($actor, &$acted) {
+        $closed = 0;
+
+        Server::query()->each(function (Server $server) use ($actor, &$acted, &$closed) {
             $what = $this->ladder->evaluate($server, $actor);
 
             if ($what !== null) {
                 $this->info($server->ref . ': ' . $what);
                 $acted++;
             }
+
+            /*
+             * 🚨 A silent agent ends everybody's session.
+             *
+             * The agent closes sessions itself when a server STOPS, because it
+             * can see that happen. What it cannot report is its own death — a
+             * host that loses power, a container that is killed, a network that
+             * goes away — and without this, every session open at that moment
+             * runs until somebody notices. Every hour of that outage becomes
+             * playtime for whoever happened to be on when it fell over, which
+             * is a leaderboard that rewards being online during a failure.
+             *
+             * Staleness is already the forum's word for "this is a memory, not
+             * a fact", and it is the right threshold here for the same reason.
+             */
+            if ($server->isStale()) {
+                $closed += $this->tracker->closeAll($server);
+            }
         });
+
+        if ($closed > 0) {
+            $this->info('closed ' . $closed . ' play session(s) on servers that stopped reporting');
+        }
 
         /**
          * 🚨 Artwork rides on the same tick rather than having its own
@@ -113,7 +139,7 @@ class HealthCommand extends AbstractCommand
          */
         $this->heartbeat->beat();
 
-        if ($acted === 0 && $got === 0) {
+        if ($acted === 0 && $got === 0 && $closed === 0) {
             $this->info('Nothing to do.');
         }
 

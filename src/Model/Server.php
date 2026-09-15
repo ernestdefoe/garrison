@@ -36,6 +36,7 @@ class Server extends AbstractModel
         'offsite_configured' => 'bool',
         'offsite_last_ok' => 'bool',
         'offsite_last_at' => 'datetime',
+        'players_known' => 'bool',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
@@ -121,6 +122,33 @@ class Server extends AbstractModel
         }
 
         return $failing;
+    }
+
+    /**
+     * Who is in the game right now, or null when this server does not say.
+     *
+     * 🚨 null and [] are different answers. "Nobody is playing" and "this
+     * server does not report players" look identical in an empty list and mean
+     * opposite things — one is an empty game, the other is a feature nobody
+     * turned on, and showing "0 players" for the second makes an operator think
+     * their server is dead.
+     *
+     * @return array<int, string>|null
+     */
+    public function playersOnline(): ?array
+    {
+        if (! $this->players_known) {
+            return null;
+        }
+
+        $decoded = json_decode((string) $this->players_online_names, true);
+
+        return is_array($decoded) ? array_values(array_filter($decoded, 'is_string')) : [];
+    }
+
+    public function sessions()
+    {
+        return $this->hasMany(PlaySession::class, 'server_id');
     }
 
     /**

@@ -153,6 +153,19 @@ ernestdefoe-garrison:
       locked: This one cannot be changed from here.
       save: Save
 
+    # 🚨 `playing`, NOT `players` — `forum.players` is already the player COUNT
+    # used on the cards, and a second `players:` under the same parent is a
+    # duplicate key, which makes the YAML parser throw and takes the whole
+    # forum API down with a 500. Caught by the duplicate-key check rather than
+    # by a customer, which is the second time that check has paid for itself
+    # today.
+    #
+    # The thing a forum can do that a standalone game panel cannot: the people
+    # in this list are often the people reading the page.
+    playing:
+      title: "{count, plural, one {# player} other {# players}} in the game"
+      nobody: Nobody is playing right now.
+
     backups:
       title: Backups
       create: Back up now

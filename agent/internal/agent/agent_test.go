@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/ernestdefoe/garrison/internal/driver"
+	"github.com/ernestdefoe/garrison/internal/players"
 	"github.com/ernestdefoe/garrison/internal/protocol"
 	"github.com/ernestdefoe/garrison/internal/settings"
 )
@@ -423,5 +424,98 @@ func TestConfigSetWorksOnADeclaredFile(t *testing.T) {
 
 	if !strings.Contains(string(after), "# the motd") {
 		t.Fatalf("the comment was lost: %s", after)
+	}
+}
+
+/*
+🚨 A crashed server prints no goodbyes.
+
+The player set is built from log lines, so without an explicit reset a crash
+leaves everybody who was playing listed as still playing — on the panel somebody
+opened precisely because the server went down — and quietly inflates their
+recorded playtime for as long as it stays down.
+*/
+func TestAStoppedServerReportsNobodyPlaying(t *testing.T) {
+	d := &fakeDriver{name: "fake", running: true}
+
+	a, err := New(context.Background(),
+		[]driver.Server{{
+			ID: "srv", Name: "Server", Driver: "fake",
+			Players: players.Config{
+				Join:  `JOIN (?P<name>.+)$`,
+				Leave: `LEAVE (?P<name>.+)$`,
+			},
+		}},
+		driver.Set{"fake": d})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	a.watcher("srv").Observe("JOIN alice")
+
+	if got := a.StatusAll(context.Background())[0]; len(got.Players) != 1 {
+		t.Fatalf("a running server reports %v, want alice", got.Players)
+	}
+
+	d.running = false
+
+	got := a.StatusAll(context.Background())[0]
+
+	if len(got.Players) != 0 {
+		t.Fatalf("a stopped server still reports %v as playing", got.Players)
+	}
+
+	// 🚨 And it must still say it KNOWS, so the panel can tell "nobody is
+	// playing" from "this server does not report players" — which look
+	// identical in an empty list and mean opposite things.
+	if !got.PlayersKnown {
+		t.Fatal("a configured server stopped reporting that it knows")
+	}
+}
+
+// The other half: a server with no player configuration must report that it
+// does not know, rather than an empty list that reads as an empty game.
+func TestAnUnconfiguredServerDoesNotClaimToKnow(t *testing.T) {
+	a, err := New(context.Background(),
+		[]driver.Server{{ID: "srv", Name: "Server", Driver: "fake"}},
+		driver.Set{"fake": &fakeDriver{name: "fake", running: true}})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	got := a.StatusAll(context.Background())[0]
+
+	if got.PlayersKnown {
+		t.Fatal("a server with no player configuration claimed to know who is playing")
+	}
+}
+
+// 🚨 A typo in one optional regex must not take a whole host offline. Every
+// other verb for that server still works.
+func TestABadPlayerPatternDoesNotStopTheAgent(t *testing.T) {
+	a, unavailable := New(context.Background(),
+		[]driver.Server{
+			{ID: "broken", Name: "Broken", Driver: "fake", Players: players.Config{Join: `(?P<name>[`, Leave: `x`}},
+			{ID: "fine", Name: "Fine", Driver: "fake"},
+		},
+		driver.Set{"fake": &fakeDriver{name: "fake", running: true}})
+
+	if a == nil {
+		t.Fatal("the agent refused to start")
+	}
+
+	if len(a.StatusAll(context.Background())) != 2 {
+		t.Fatal("a server went missing")
+	}
+
+	var mentioned bool
+	for _, u := range unavailable {
+		if strings.Contains(u, "players for broken") {
+			mentioned = true
+		}
+	}
+
+	if !mentioned {
+		t.Fatalf("the bad pattern was not reported: %v", unavailable)
 	}
 }

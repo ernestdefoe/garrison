@@ -56,6 +56,24 @@ class ListServersController implements RequestHandlerInterface
                 'detail' => $server->state_detail,
                 'stale' => $server->isStale(),
                 'playersOnline' => $server->players_online,
+
+                /**
+                 * 🚨 The NAMES, where the server reports them, and null where
+                 * it does not.
+                 *
+                 * This is the thing a forum can do that a standalone game
+                 * panel cannot: the people in the list are, often, the people
+                 * reading the page. Seeing "alice, bob and two others are on
+                 * right now" is a reason to go and join them, which is the
+                 * whole argument for a game panel living in a community rather
+                 * than beside one.
+                 *
+                 * Public, like the player COUNT already is. A name somebody
+                 * chose to display in a shared game is not a secret, and
+                 * hiding it while showing "3 players online" would be a
+                 * strange half-measure.
+                 */
+                'playersNames' => $server->playersOnline(),
                 'playersMax' => $server->players_max,
                 'runningSince' => $server->running_since?->toIso8601String(),
                 'lastStatusAt' => $server->last_status_at?->toIso8601String(),

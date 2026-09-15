@@ -17,6 +17,7 @@ import (
 
 	"github.com/ernestdefoe/garrison/internal/health"
 	"github.com/ernestdefoe/garrison/internal/offsite"
+	"github.com/ernestdefoe/garrison/internal/players"
 	"github.com/ernestdefoe/garrison/internal/protocol"
 	"github.com/ernestdefoe/garrison/internal/settings"
 )
@@ -107,6 +108,15 @@ type Server struct {
 	 * three lines below it stays unreachable.
 	 */
 	Config []settings.File `json:"config,omitempty"`
+
+	/*
+	 * How to read who is playing, from the server's own log.
+	 *
+	 * 🚨 Usually just `{"preset": "minecraft"}`. The audience for this product
+	 * runs a game server for their friends; a feature that only works for
+	 * people who can debug a capture group is one most buyers never turn on.
+	 */
+	Players players.Config `json:"players,omitempty"`
 }
 
 // DefaultStopGrace is used when a server does not set one. Valheim's own save

@@ -139,6 +139,18 @@ func (l *HTTPLink) Run(ctx context.Context) error {
 }
 
 func (l *HTTPLink) once(ctx context.Context) (int, error) {
+	/*
+	 * 🚨 Console FIRST, then status.
+	 *
+	 * The console read is also what feeds the player watcher — the same lines,
+	 * read once. Gathering status first would report a set of players built
+	 * from the PREVIOUS poll's lines, so somebody who joined twenty seconds ago
+	 * would not appear until the poll after next. Half a minute of "not online"
+	 * for somebody who is standing in the game is exactly the kind of small lie
+	 * that makes a panel feel unreliable.
+	 */
+	console := l.console.collect(ctx, l.agent)
+
 	body := pollRequest{
 		Info: protocol.AgentInfo{
 			Version: Version,
@@ -147,7 +159,7 @@ func (l *HTTPLink) once(ctx context.Context) (int, error) {
 			Drivers: l.agent.Drivers(),
 		},
 		Servers: l.agent.StatusAll(ctx),
-		Console: l.console.collect(ctx, l.agent),
+		Console: console,
 	}
 
 	l.mu.Lock()
