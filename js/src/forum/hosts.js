@@ -169,16 +169,30 @@ function registerBespoke(app, makeContent) {
 
   if (!flarum?.extensions || !('ernestdefoe-bespoke' in flarum.extensions)) return false;
 
+  /*
+   * 🚨 TRANSLATION KEYS, not translated text.
+   *
+   * Bespoke's contract is a string: either a dotted key it resolves from the
+   * owning extension's locale, or a plain English literal. Passing what
+   * `trans()` returns breaks that in a way that is easy to miss, because
+   * `trans()` hands back an ARRAY of vnodes — the widget's name happens to
+   * survive (an array concatenates into a string), while its settings panel
+   * calls `.toLowerCase()` on the label and an array does not have one.
+   *
+   * Keys are also the better answer on their own terms: Bespoke resolves them
+   * when it draws the editor, in the reader's own locale, rather than at
+   * whatever moment this initializer happened to run.
+   */
   const def = {
     type: 'garrison-servers',
-    label: app.translator.trans('ernestdefoe-garrison.forum.title'),
+    label: 'ernestdefoe-garrison.forum.title',
     icon: 'fas fa-tower-observation',
     zones: ['sidebar', 'above', 'below'],
     schema: [
       {
         key: 'heading',
         type: 'text',
-        label: app.translator.trans('ernestdefoe-garrison.forum.widget_heading'),
+        label: 'ernestdefoe-garrison.forum.widget_heading',
         default: '',
       },
     ],

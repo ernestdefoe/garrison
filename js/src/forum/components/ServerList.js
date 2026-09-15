@@ -72,25 +72,43 @@ export default class ServerList extends Component {
     // twenty hours.
     const stale = s.stale || s.agentLate;
 
+    /*
+     * 🚨 THE WHOLE ROW IS A LINK, and it used to be nothing at all.
+     *
+     * A widget showing "Shattered Pact · 3/10" with no way through is a dead
+     * end: the reader now knows a server exists and has no way to find its
+     * address, its players, or why it is unhappy. Every one of those lives on
+     * the server's own page, and this was the only place most readers would
+     * ever see the server named.
+     *
+     * The row rather than the name: a 240px sidebar entry is a target people
+     * aim at as a whole, and a 90px name inside it is a target they miss.
+     */
     return (
       <li className={'GarrisonServer' + (stale ? ' GarrisonServer--stale' : '')} key={s.id}>
-        {/*
-          🚨 The dot, the mark and the name are ONE group that never breaks up.
-          Left to wrap freely they took three lines in a narrow fof panel — the
-          mark alone on one, the name on another, the status on a third — which
-          reads as a broken layout. Only the status may drop to a second line.
-        */}
-        <span className="GarrisonServer-identity">
-          <span
-            className={`GarrisonServer-state GarrisonServer-state--${s.state}`}
-            aria-hidden="true"
-          />
-          {serverMark(s, 18)}
-          <span className="GarrisonServer-name" title={s.name}>
-            {s.name}
+        <a
+          className="GarrisonServer-link"
+          href={app.route('garrison.server', { id: s.id })}
+          config={m.route.link}
+          title={s.name}
+        >
+          {/*
+            🚨 The dot, the mark and the name are ONE group that never breaks
+            up. Left to wrap freely they took three lines in a narrow fof panel
+            — the mark alone on one, the name on another, the status on a third
+            — which reads as a broken layout. Only the status may drop to a
+            second line.
+          */}
+          <span className="GarrisonServer-identity">
+            <span
+              className={`GarrisonServer-state GarrisonServer-state--${s.state}`}
+              aria-hidden="true"
+            />
+            {serverMark(s, 18)}
+            <span className="GarrisonServer-name">{s.name}</span>
           </span>
-        </span>
-        <span className="GarrisonServer-players">{this.detail(s, stale)}</span>
+          <span className="GarrisonServer-players">{this.detail(s, stale)}</span>
+        </a>
       </li>
     );
   }

@@ -180,7 +180,29 @@ export default class ServerPage extends Page {
        * before anybody has looked at why the server is unhappy.
        */
       s.canConfig ? <Settings server={s} key="settings" /> : null,
-    ];
+
+      /*
+       * 🚨 `.filter(Boolean)`, AND IT IS LOAD-BEARING.
+       *
+       * Mithril refuses a fragment whose children are part keyed and part not,
+       * and — this is the subtle half — a `null` COUNTS AS UNKEYED. Its check
+       * is literally `(child != null && child.key != null) !== isKeyed`, so one
+       * null beside keyed siblings throws
+       *
+       *     In fragments, vnodes must either all have keys or none have keys.
+       *
+       * The throw happens inside the renderer, so the whole page body renders
+       * as nothing while the wrapper div is still there — an empty page with an
+       * error that names Mithril and no file of ours.
+       *
+       * Every conditional above yields null: a healthy server has no health
+       * block, a member cannot see the console, a server with no join details
+       * has no join block. So this page rendered perfectly against an unhealthy
+       * server with every panel present and went blank the moment it was
+       * pointed at a healthy one — which is the first thing a customer would
+       * have done.
+       */
+    ].filter(Boolean);
   }
 
   /**

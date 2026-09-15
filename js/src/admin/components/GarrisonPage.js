@@ -145,10 +145,18 @@ export default class GarrisonPage extends ExtensionPage {
      * restarts nothing, backs up nothing and reports nothing, while looking
      * entirely normal.
      */
+    /*
+     * 🚨 `.filter(Boolean)` for the same reason ServerPage needs it: Mithril
+     * treats a `null` as UNKEYED, and one null beside keyed siblings throws
+     * "In fragments, vnodes must either all have keys or none have keys" from
+     * inside the renderer — blanking the block with an error that names no file
+     * of ours. `machinery()` returns null for a verdict the payload did not
+     * carry, which is exactly what an older agent or a partial response gives.
+     */
     return [
       this.machinery('scheduler', h.scheduler),
       this.machinery('queue', h.queue),
-    ];
+    ].filter(Boolean);
   }
 
   /**
