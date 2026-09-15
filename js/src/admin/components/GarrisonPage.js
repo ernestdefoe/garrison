@@ -129,26 +129,62 @@ export default class GarrisonPage extends ExtensionPage {
    * has been run" is the same sentence an alert needs to be true.
    */
   delivery() {
-    const d = this.state.delivery;
+    const h = this.state.health;
 
-    if (!d) return null;
+    if (!h) return null;
+
+    /*
+     * 🚨 TWO lines, because they have two completely different fixes — a cron
+     * entry and a worker process — and one combined "something is wrong" would
+     * send an operator to look at the wrong thing half the time.
+     *
+     * The scheduler comes first because it is the one that matters more and
+     * the one more often missing: without it, Garrison checks nothing,
+     * restarts nothing, backs up nothing and reports nothing, while looking
+     * entirely normal.
+     */
+    return [
+      this.machinery('scheduler', h.scheduler),
+      this.machinery('queue', h.queue),
+    ];
+  }
+
+  /**
+   * 🚨 The parameter is `status`, and it must never be named `m`.
+   *
+   * JSX compiles to `m(...)` calls, so a parameter called `m` shadows
+   * Mithril's global inside the very function whose body is JSX — and the
+   * failure is `TypeError: m is not a function` pointing at a line that
+   * contains no call at all. It cost a round trip here: the block rendered as
+   * nothing, and the error named the method rather than the parameter.
+   */
+  machinery(what, status) {
+    if (!status) return null;
 
     // 🚨 `unknown` is not a warning. Before the first scheduled tick there is
     // no evidence either way, and a panel that cries wolf on a fresh install
     // teaches an operator to ignore the one time it means something.
-    const tone = { ok: 'ok', stalled: 'bad', unknown: 'muted' }[d.state] || 'muted';
+    const tone = { ok: 'ok', stalled: 'bad', unknown: 'muted' }[status.state] || 'muted';
 
     return (
-      <div className={'GarrisonAdmin-delivery GarrisonAdmin-delivery--' + tone}>
+      <div className={'GarrisonAdmin-delivery GarrisonAdmin-delivery--' + tone} key={what}>
         <div className="GarrisonAdmin-delivery-headline">
-          {app.translator.trans('ernestdefoe-garrison.admin.delivery.' + d.state)}
+          {app.translator.trans(`ernestdefoe-garrison.admin.machinery.${what}.${status.state}`)}
         </div>
-        {d.state === 'stalled' ? <div className="GarrisonAdmin-meta">{this.t('delivery.stalled_help')}</div> : null}
-        {d.ranAt ? (
+
+        {/*
+          🚨 The fix, in the same block as the problem. "Alerts are not getting
+          through" without the next sentence is a puzzle; with it, it is a task.
+        */}
+        {status.state === 'stalled' ? (
           <div className="GarrisonAdmin-meta">
-            {app.translator.trans('ernestdefoe-garrison.admin.delivery.last_ran', {
-              when: humanTime(d.ranAt),
-            })}
+            {app.translator.trans(`ernestdefoe-garrison.admin.machinery.${what}.stalled_help`)}
+          </div>
+        ) : null}
+
+        {status.at ? (
+          <div className="GarrisonAdmin-meta">
+            {app.translator.trans('ernestdefoe-garrison.admin.machinery.last', { when: humanTime(status.at) })}
           </div>
         ) : null}
       </div>

@@ -6,7 +6,7 @@ use ErnestDefoe\Garrison\Agent\Gateway;
 use ErnestDefoe\Garrison\Game\Artwork;
 use ErnestDefoe\Garrison\Health\Ladder;
 use ErnestDefoe\Garrison\Model\Server;
-use ErnestDefoe\Garrison\Notification\DeliveryCheck;
+use ErnestDefoe\Garrison\Health\Heartbeat;
 use Flarum\Console\AbstractCommand;
 use Flarum\User\User;
 
@@ -24,7 +24,7 @@ class HealthCommand extends AbstractCommand
         protected Ladder $ladder,
         protected Artwork $artwork,
         protected Gateway $gateway,
-        protected DeliveryCheck $delivery
+        protected Heartbeat $heartbeat
     ) {
         parent::__construct();
     }
@@ -95,17 +95,23 @@ class HealthCommand extends AbstractCommand
         }
 
         /**
-         * 🚨 The alert path proving itself, on the same tick.
+        /**
+         * 🚨 Garrison's own machinery proving itself, on the same tick.
          *
-         * Everything above this line assumes that noticing a problem and
-         * telling somebody are the same act. They are not: the telling goes
-         * through the forum's queue, and a queue with no worker swallows every
-         * alert without a word. This pushes one trivial job down that exact
-         * road so the admin screen can say whether anything is travelling it.
-         * See DeliveryCheck — it exists because this failed silently for three
-         * days on the forum this extension was built on.
+         * Two things this product completely depends on and does not own: the
+         * SCHEDULER that runs this very command, and the QUEUE WORKER that
+         * delivers every alert. Neither announces its absence — a forum with no
+         * cron entry runs none of this and looks entirely normal, and a forum
+         * with no worker writes no notifications while `sync()` returns
+         * happily.
+         *
+         * Stamping a time here proves the first (this line only runs if the
+         * scheduler did), and the job it pushes proves the second when a worker
+         * runs it. See Heartbeat — it exists because the queue was dead for
+         * three days on the forum this extension was built on, and the only
+         * reason it was found was somebody going looking.
          */
-        $this->delivery->beat();
+        $this->heartbeat->beat();
 
         if ($acted === 0 && $got === 0) {
             $this->info('Nothing to do.');

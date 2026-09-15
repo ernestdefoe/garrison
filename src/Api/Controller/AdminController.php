@@ -10,7 +10,7 @@ use ErnestDefoe\Garrison\Model\GarrisonAgent;
 use ErnestDefoe\Garrison\Model\Incident;
 use ErnestDefoe\Garrison\Model\Schedule;
 use ErnestDefoe\Garrison\Model\Server;
-use ErnestDefoe\Garrison\Notification\DeliveryCheck;
+use ErnestDefoe\Garrison\Health\Heartbeat;
 use Flarum\Foundation\ValidationException;
 use Flarum\Http\RequestUtil;
 use Flarum\Locale\TranslatorInterface;
@@ -36,7 +36,7 @@ class AdminController implements RequestHandlerInterface
         protected TranslatorInterface $translator,
         protected Factory $filesystem,
         protected Artwork $artwork,
-        protected DeliveryCheck $delivery
+        protected Heartbeat $heartbeat
     ) {
     }
 
@@ -100,13 +100,14 @@ class AdminController implements RequestHandlerInterface
             ])->values()->all(),
 
             /*
-             * 🚨 Whether an alert could actually get out, measured rather
-             * than assumed. See DeliveryCheck: a forum whose queue worker is
-             * dead loses every Garrison notification in total silence, and the
-             * panel would otherwise stay green through the outage this
-             * product exists to catch.
+             * 🚨 Whether Garrison's machinery is running at all, measured
+             * rather than assumed. See Heartbeat: a forum with no scheduler
+             * runs none of this and looks entirely normal, and a forum with no
+             * queue worker loses every notification in total silence. The
+             * panel would otherwise stay green through the outage this product
+             * exists to catch.
              */
-            'delivery' => $this->delivery->report(),
+            'health' => $this->heartbeat->report(),
 
             'schedules' => Schedule::query()->orderBy('server_id')->orderBy('at_minute')->get()
                 ->map(fn (Schedule $s) => $this->scheduleRow($s))->values()->all(),

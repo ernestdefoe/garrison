@@ -196,15 +196,27 @@ ernestdefoe-garrison:
     load_failed: Could not load Garrison's state.
 
     # 🚨 The wording matters more than usual here. This is Garrison reporting
-    # on its own ability to tell anybody anything, and an operator reading
-    # "stalled" needs to know what it costs them and what to do — not a status
-    # word they have to go and research.
-    delivery:
-      ok: Alerts are getting through.
-      stalled: Alerts are not getting through.
-      unknown: Garrison has not checked whether alerts are getting through yet.
-      stalled_help: Garrison sends alerts as background jobs, and nothing on this forum has run one for a while — so a server going down would be recorded here and nobody would be told. This is usually a queue worker that has stopped; restarting it is the fix.
-      last_ran: "Last confirmed {when}"
+    # on the two pieces of forum machinery it completely depends on and does
+    # not own — and an operator reading "stalled" needs to know what it costs
+    # them and what to do, not a status word they have to go and research.
+    #
+    # Two separate verdicts on purpose: the fixes are a cron entry and a worker
+    # process, and one combined message would send somebody to the wrong one.
+    machinery:
+      last: "Last confirmed {when}"
+      scheduler:
+        ok: Garrison is running its checks.
+        stalled: Garrison is not running.
+        unknown: Garrison has not run a check yet.
+        # 🚨 The most consequential sentence in this file. A forum without this
+        # cron entry runs NOTHING — no health checks, no restarts, no backups,
+        # no schedules, no alerts — and looks entirely normal while doing so.
+        stalled_help: "Nothing has run Garrison's checks for a while, so no server is being watched, restarted or backed up. Flarum's scheduler is what runs them, and it needs this in the server's crontab: * * * * * php /path/to/forum/flarum schedule:run"
+      queue:
+        ok: Alerts are getting through.
+        stalled: Alerts are not getting through.
+        unknown: Garrison has not checked whether alerts are getting through yet.
+        stalled_help: Garrison sends alerts as background jobs, and nothing on this forum has run one for a while — so a server going down would be recorded here and nobody would be told. This is usually a queue worker that has stopped; restarting it is the fix.
 
     # 🚨 Day toggles and a clock, never a cron field. The operator most likely
     # to want a nightly restart is the one least likely to write `0 5 * * *`

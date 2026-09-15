@@ -10,7 +10,7 @@ use ErnestDefoe\Garrison\Api\Controller\ConsoleController;
 use ErnestDefoe\Garrison\Game\Artwork;
 use ErnestDefoe\Garrison\Health\Ladder;
 use ErnestDefoe\Garrison\Notification\Alerts;
-use ErnestDefoe\Garrison\Notification\DeliveryCheck;
+use ErnestDefoe\Garrison\Health\Heartbeat;
 use ErnestDefoe\Garrison\Notification\Webhooks;
 use ErnestDefoe\Garrison\Schedule\Runner;
 use Flarum\Foundation\AbstractServiceProvider;
@@ -67,7 +67,7 @@ class GarrisonServiceProvider extends AbstractServiceProvider
         });
 
         /*
-         * 🚨 The queue is resolved when DeliveryCheck is built, not captured
+         * 🚨 The queue is resolved when Heartbeat is built, not captured
          * at boot. Core's own EmailNotificationDriver has a comment explaining
          * why: the RoutingQueue wrapper that puts jobs on their registered
          * queue is applied in QueueServiceProvider::boot, AFTER extension
@@ -75,8 +75,8 @@ class GarrisonServiceProvider extends AbstractServiceProvider
          * the unwrapped driver and silently bypasses routing — which for a
          * heartbeat would mean measuring a queue nothing else uses.
          */
-        $this->container->singleton(DeliveryCheck::class, function ($container) {
-            return new DeliveryCheck(
+        $this->container->singleton(Heartbeat::class, function ($container) {
+            return new Heartbeat(
                 $container->make(Queue::class),
                 $container->make(SettingsRepositoryInterface::class)
             );
@@ -109,7 +109,7 @@ class GarrisonServiceProvider extends AbstractServiceProvider
                 $container->make(TranslatorInterface::class),
                 $container->make(Factory::class),
                 $container->make(Artwork::class),
-                $container->make(DeliveryCheck::class)
+                $container->make(Heartbeat::class)
             );
         });
     }
