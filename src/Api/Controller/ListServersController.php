@@ -3,6 +3,7 @@
 namespace ErnestDefoe\Garrison\Api\Controller;
 
 use ErnestDefoe\Garrison\Game\Marks;
+use ErnestDefoe\Garrison\Model\Identity;
 use ErnestDefoe\Garrison\Model\Server;
 use Flarum\Http\RequestUtil;
 use Laminas\Diactoros\Response\JsonResponse;
@@ -47,7 +48,18 @@ class ListServersController implements RequestHandlerInterface
             $query->where('is_public', true);
         }
 
-        $servers = $query->get()->map(function (Server $server) use ($actor) {
+        /*
+         * 🚨 One query for every identity, not one per server.
+         *
+         * A forum with a dozen servers would otherwise make a dozen queries on
+         * every poll of every visitor — which is precisely the shape that once
+         * exhausted a database connection cap and 500'd a whole forum.
+         */
+        $identities = $actor->isGuest()
+            ? collect()
+            : Identity::query()->where('user_id', $actor->id)->get()->keyBy('server_id');
+
+        $servers = $query->get()->map(function (Server $server) use ($actor, $identities) {
             $row = [
                 'id' => $server->id,
                 'name' => $server->name,
@@ -180,6 +192,28 @@ class ListServersController implements RequestHandlerInterface
              */
             $row['canManage'] = $actor->hasPermission('garrison.manage');
             $row['canConfig'] = $actor->hasPermission('garrison.config') || $actor->hasPermission('garrison.manage');
+
+            /**
+             * 🚨 The actor's OWN identity on this server, and only ever their
+             * own. Sending anybody else's would turn the status page into a
+             * directory mapping forum accounts to in-game names, which is a
+             * thing somebody may have chosen to link privately.
+             *
+             * `canLink` is false where the server cannot whisper — a flow that
+             * offers to send a code no game will deliver is a button that
+             * always fails.
+             */
+            if (! $actor->isGuest()) {
+                $identity = $identities->get($server->id);
+
+                $row['identity'] = $identity === null ? null : [
+                    'player' => $identity->player,
+                    'verified' => $identity->isVerified(),
+                    'awaitingCode' => ! $identity->isVerified() && $identity->codeIsLive(),
+                ];
+
+                $row['canLink'] = $server->players_known;
+            }
 
             return $row;
         })->values()->all();

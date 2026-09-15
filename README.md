@@ -72,6 +72,7 @@ not merely by passing:
     internal/backup      archives: create, list, restore, prune, and safety copies
     internal/offsite     S3-compatible copies, signed by hand to keep deps at one
     internal/settings    declared config files — read and rewrite in place
+    internal/players     who is in the game, from its log — and in-game proof of identity
     internal/health      readiness probes — "running" and "joinable" are not the same
 
 ## Try it
@@ -199,6 +200,59 @@ the provider's own error when they are not.
 - **No `exec` verb, and there will not be one.** A fully compromised forum can
   restart a server it already knows about. It cannot ask for a shell, because
   there is no verb through which it could.
+
+## Running the agent under systemd
+
+🚨 **`KillMode=process`, or restarting the agent kills every game on the host.**
+
+systemd's default is `control-group`: stopping a unit kills everything in its
+cgroup, and the game servers the agent started are in it. The agent deliberately
+detaches from its children rather than signalling them — stopping the agent must
+never stop the games, or nobody would let it auto-update — and systemd's default
+defeats that from the outside. Found on the dev host, where every restart of the
+agent silently took the game down with it.
+
+```ini
+[Unit]
+Description=Garrison agent
+After=network-online.target
+
+[Service]
+ExecStart=/usr/local/bin/garrison-agent --config /etc/garrison/agent.json
+Restart=always
+RestartSec=5
+
+# 🚨 Not the default. See above: without this, `systemctl restart garrison-agent`
+# stops every game server on this machine.
+KillMode=process
+
+[Install]
+WantedBy=multi-user.target
+```
+
+## Linking forum accounts to players
+
+A player proves who they are **inside the game**, not on the forum. A form that
+asks for an in-game name and believes the answer lets anybody claim the
+community's best-known player and inherit their playtime and rank.
+
+```json
+"players": {
+  "preset": "minecraft",
+  "verifyMessage": "Garrison code: {code}"
+}
+```
+
+Garrison whispers a six-character code to that player using the preset's `say`
+template; they read it in the game and type it back on the forum. Presets that
+have no whisper command cannot verify, and the forum does not offer the flow
+there rather than showing a button that always fails.
+
+🚨 **The forum never composes the console line.** It sends a name and a code; the
+agent renders the operator's template and refuses any player it cannot currently
+see in the game. That matters because verification is something ordinary members
+do — and a game console is where `ban`, `op` and `give` live. A player called
+`alice /op mallory` would otherwise turn one command into two.
 
 ## Notes for whoever picks this up
 

@@ -8,6 +8,7 @@ use ErnestDefoe\Garrison\Api\Controller\AdminController;
 use ErnestDefoe\Garrison\Api\Controller\AgentPollController;
 use ErnestDefoe\Garrison\Api\Controller\CommandStatusController;
 use ErnestDefoe\Garrison\Api\Controller\ConsoleController;
+use ErnestDefoe\Garrison\Api\Controller\IdentityController;
 use ErnestDefoe\Garrison\Api\Controller\ListServersController;
 use ErnestDefoe\Garrison\Api\Controller\QueueCommandController;
 use ErnestDefoe\Garrison\Api\Resource\ServerResource;
@@ -125,6 +126,20 @@ $extenders = [
          * controller.
          */
         ->get('/garrison/commands/{id}', 'garrison.command.status', CommandStatusController::class)
+
+        /*
+         * 🚨 Reachable by ordinary members, which nothing else here is.
+         *
+         * Proving who you are in a game is something a player does, not
+         * something staff do for them. The controller acts only on the
+         * actor's own identity and takes no user id from the request — see
+         * its docblock — and the console line it ultimately causes is
+         * rendered by the AGENT from the operator's template, never composed
+         * here.
+         */
+        ->post('/garrison/servers/{id}/identity', 'garrison.identity.claim', IdentityController::class)
+        ->post('/garrison/servers/{id}/identity/confirm', 'garrison.identity.confirm', IdentityController::class)
+        ->delete('/garrison/servers/{id}/identity', 'garrison.identity.unlink', IdentityController::class)
 
         /*
          * Admin. Every one of these resolves the same controller, which

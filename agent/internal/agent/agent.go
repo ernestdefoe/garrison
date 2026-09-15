@@ -273,6 +273,41 @@ func (a *Agent) dispatch(ctx context.Context, req protocol.Request, srv driver.S
 
 		return result, nil
 
+	case protocol.VerbPlayerVerify:
+		var p protocol.VerifyParams
+		if derr := decode(req.Params, &p); derr != nil {
+			return nil, derr
+		}
+
+		w := a.watcher(srv.ID)
+		if w == nil {
+			return nil, protocol.Errf(protocol.CodeNotSupported,
+				"this server does not read who is playing, so it cannot verify anybody")
+		}
+
+		line, verr := w.VerifyLine(p.Player, p.Code)
+		if verr != nil {
+			// 🚨 CodeBadRequest, not CodeDriverFailed. Every refusal here is
+			// the caller asking for something it may not have — a player who
+			// is not in the game, a name shaped like a command. Reporting it
+			// as a host failure would hide the one message that tells somebody
+			// to go and join the server first.
+			return nil, protocol.Errf(protocol.CodeBadRequest, "%v", verr)
+		}
+
+		if serr := drv.Send(ctx, srv, line); serr != nil {
+			return nil, serr
+		}
+
+		/*
+		 * 🚨 The rendered line is NOT returned. It contains the code, and a
+		 * command result is readable by whoever queued it — which for this
+		 * verb is the person being verified, so it would hand them the answer
+		 * to the question they are meant to go and read in the game. The whole
+		 * proof is that they saw it there.
+		 */
+		return map[string]any{"sent": true}, nil
+
 	case protocol.VerbConfigList:
 		return map[string]any{"files": settings.List(srv.Config)}, nil
 

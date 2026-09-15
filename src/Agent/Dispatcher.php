@@ -46,6 +46,7 @@ class Dispatcher
         'config.list',
         'config.get',
         'config.set',
+        'player.verify',
     ];
 
     /**
@@ -119,6 +120,34 @@ class Dispatcher
      */
     protected function assertPermitted(User $actor, Server $server, string $verb): void
     {
+        /*
+         * 🚨 player.verify is the ONE verb ordinary members may queue, and it
+         * is checked first because every rule below would refuse it.
+         *
+         * It is safe for them for a reason that lives on the other side: the
+         * agent renders the whisper from the OPERATOR's template and refuses
+         * any player it cannot currently see in the game, so the forum can
+         * neither compose console text nor aim it at somebody who is not
+         * there. Without that, this would be handing every account the ban and
+         * op commands — see players.VerifyLine.
+         *
+         * The gate that remains is visibility: you may prove who you are on a
+         * server you can see. On one you cannot, the answer is the same 404
+         * the rest of the product gives, because otherwise this verb becomes a
+         * way to discover that a private server exists.
+         */
+        if ($verb === 'player.verify') {
+            $actor->assertRegistered();
+
+            if (! $server->is_public && ! $actor->hasPermission('garrison.view')) {
+                throw new ValidationException([
+                    'verb' => $this->translator->trans('ernestdefoe-garrison.api.errors.not_permitted'),
+                ]);
+            }
+
+            return;
+        }
+
         if ($actor->hasPermission('garrison.manage')) {
             return;
         }

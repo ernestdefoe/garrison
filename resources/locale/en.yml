@@ -15,6 +15,15 @@ ernestdefoe-garrison:
       unresolvable: That address does not resolve to anything.
       private_address: That address points inside this network, so Garrison will not fetch it.
 
+      # 🚨 Every one of these is a refusal somebody can ACT on, and each points
+      # at a different next step. A single "something went wrong" would make
+      # all of them look like a broken panel.
+      bad_player_name: That does not look like an in-game name.
+      player_taken: Somebody has already proved that this is their character on this server.
+      code_expired: That code has expired. Ask for a new one.
+      code_wrong: That code is not right. Check it in the game and try again.
+      code_too_soon: A code was just sent. Check the game, or wait a moment and try again.
+
   # 🚨 Email copy, and the one place in this file where a mistake cannot be
   # taken back — a forum post can be edited, a sent email cannot. The subject
   # names the server, because this is read on a lock screen.
@@ -165,6 +174,21 @@ ernestdefoe-garrison:
     playing:
       title: "{count, plural, one {# player} other {# players}} in the game"
       nobody: Nobody is playing right now.
+
+    # 🚨 Proved in the GAME, not asserted on the forum. A form that believes
+    # whatever somebody types lets anybody claim the community's best-known
+    # player and inherit their playtime and rank.
+    link:
+      title: Your in-game account
+      explain: Link your forum account to your character, so your playtime counts here. Join the server, type your in-game name below, and Garrison will send you a code in the game.
+      name_placeholder: Your name in the game
+      send_code: Send me a code
+      check_the_game: Garrison has sent a code to that player in the game. Read it there and type it below.
+      code_placeholder: The code from the game
+      confirm: That's me
+      start_over: Use a different name
+      linked: "You are linked to {player} on this server."
+      unlink: Unlink
 
     backups:
       title: Backups

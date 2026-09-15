@@ -69,6 +69,18 @@ const (
 	VerbConfigList Verb = "config.list"
 	VerbConfigGet  Verb = "config.get"
 	VerbConfigSet  Verb = "config.set"
+
+	/*
+	 * Identity.
+	 *
+	 * 🚨 The forum sends a NAME and a CODE. It does not send a console line,
+	 * and it cannot: the agent renders the whisper from the operator's own
+	 * template, and only for a player it currently sees in the game. A verb
+	 * that let the forum compose console text would hand every forum member
+	 * the ban, op and give commands, since verification is a thing ordinary
+	 * members do.
+	 */
+	VerbPlayerVerify Verb = "player.verify"
 )
 
 // known is the entire set of verbs this agent will ever dispatch.
@@ -94,6 +106,7 @@ var known = map[Verb]struct{}{
 	VerbConfigList:    {},
 	VerbConfigGet:     {},
 	VerbConfigSet:     {},
+	VerbPlayerVerify:  {},
 }
 
 // Known reports whether v is a verb this agent implements. Everything else is
@@ -229,6 +242,17 @@ type ConfigParams struct {
 	Section string `json:"section,omitempty"`
 	Key     string `json:"key,omitempty"`
 	Value   string `json:"value,omitempty"`
+}
+
+// VerifyParams is the payload of player.verify.
+//
+// 🚨 Two short strings and nothing else. The agent refuses a player it cannot
+// currently see in the game, and refuses either field if it carries anything a
+// console would read as a separator — see players.VerifyLine, which is where
+// the security of this feature actually lives.
+type VerifyParams struct {
+	Player string `json:"player"`
+	Code   string `json:"code"`
 }
 
 // ---- results -------------------------------------------------------------

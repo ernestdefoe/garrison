@@ -6,6 +6,7 @@ import humanTime from 'flarum/common/helpers/humanTime';
 
 import Backups from './Backups';
 import Console from './Console';
+import LinkIdentity from './LinkIdentity';
 import ServerControls from './ServerControls';
 import Settings from './Settings';
 import { bytes } from '../format';
@@ -129,6 +130,14 @@ export default class ServerPage extends Page {
       this.players(s, running),
       this.join(s),
       this.facts(s, running),
+
+      /*
+       * 🚨 Above the staff panels, because this is the only thing on this page
+       * an ordinary member can do. Burying it under the console and the backups
+       * — neither of which most visitors can even see — would put the one
+       * control aimed at them at the bottom of a page of controls that are not.
+       */
+      <LinkIdentity server={s} key="link" />,
 
       s.canConsole ? <Console server={s} tall={true} key="console" /> : null,
 

@@ -774,3 +774,55 @@
 .GarrisonPlayers--empty {
   color: var(--muted-color);
 }
+
+/*
+ * Linking a forum account to an in-game character.
+ */
+.GarrisonLink {
+  border-top: 1px solid var(--control-bg);
+  margin-top: 24px;
+  padding-top: 16px;
+
+  h3 {
+    font-size: 15px;
+    margin: 0 0 6px;
+  }
+}
+
+.GarrisonLink-help {
+  color: var(--muted-color);
+  margin: 0 0 8px;
+  /* Prose, so it reads at a comfortable measure rather than the full page. */
+  max-width: 62ch;
+}
+
+.GarrisonLink-form {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+
+  .FormControl {
+    flex: 1 1 180px;
+    min-width: 0;
+  }
+}
+
+/*
+ * 🚨 Monospaced and spaced out, because this is copied off a game screen by
+ * eye. The alphabet already excludes 0/O and 1/I/L; the rest is making each
+ * character easy to tell apart while typing.
+ */
+.GarrisonLink-code {
+  flex-grow: 0 !important;
+  font-family: var(--code-font-family, monospace);
+  letter-spacing: 0.15em;
+  max-width: 180px;
+  text-transform: uppercase;
+}
+
+.GarrisonLink-error {
+  border-inline-start: 3px solid var(--alert-error-color, #d14848);
+  margin: 0 0 8px;
+  padding: 6px 10px;
+}

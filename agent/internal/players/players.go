@@ -54,6 +54,21 @@ type Config struct {
 	 * it, linking is somebody typing a name they saw on a leaderboard.
 	 */
 	Say string `json:"say,omitempty"`
+
+	/*
+	 * VerifyMessage is what a player is actually told, with {code} in it.
+	 *
+	 * 🚨 The OPERATOR writes this, not the forum, and that is a security
+	 * decision before it is a translation one. If the forum supplied the text,
+	 * any member who can start a verification would be composing a string that
+	 * ends up in a game console — and the console is where ban, op and give
+	 * live. The forum sends six alphanumeric characters and nothing else.
+	 *
+	 * It being the operator's also means a German community can say it in
+	 * German, which the forum could not do for them anyway: this text is read
+	 * inside the game, not on a page Flarum renders.
+	 */
+	VerifyMessage string `json:"verifyMessage,omitempty"`
 }
 
 // Configured reports whether anything can be read at all.
@@ -131,9 +146,10 @@ func Presets() []string {
 type Watcher struct {
 	mu sync.Mutex
 
-	join  *regexp.Regexp
-	leave *regexp.Regexp
-	say   string
+	join   *regexp.Regexp
+	leave  *regexp.Regexp
+	say    string
+	verify string
 
 	online map[string]struct{}
 }
@@ -163,6 +179,9 @@ func New(cfg Config) (*Watcher, error) {
 		if resolved.Say == "" {
 			resolved.Say = preset.Say
 		}
+		if resolved.VerifyMessage == "" {
+			resolved.VerifyMessage = preset.VerifyMessage
+		}
 	}
 
 	join, err := compile("join", resolved.Join)
@@ -175,7 +194,18 @@ func New(cfg Config) (*Watcher, error) {
 		return nil, err
 	}
 
-	return &Watcher{join: join, leave: leave, say: resolved.Say, online: map[string]struct{}{}}, nil
+	verify := resolved.VerifyMessage
+	if verify == "" {
+		verify = DefaultVerifyMessage
+	}
+
+	return &Watcher{
+		join:   join,
+		leave:  leave,
+		say:    resolved.Say,
+		verify: verify,
+		online: map[string]struct{}{},
+	}, nil
 }
 
 /*
@@ -253,6 +283,9 @@ func (w *Watcher) Reset() {
 	w.online = map[string]struct{}{}
 }
 
+// DefaultVerifyMessage is used when the operator did not write one.
+const DefaultVerifyMessage = "Garrison code: {code}"
+
 // Say renders the whisper command for one player, or "" if the operator did not
 // configure one.
 func (w *Watcher) Say(player, message string) string {
@@ -263,6 +296,80 @@ func (w *Watcher) Say(player, message string) string {
 	r := strings.NewReplacer("{player}", player, "{message}", message)
 
 	return r.Replace(w.say)
+}
+
+/*
+VerifyLine renders the whole console command that tells one player their code.
+
+🚨 IT REFUSES ANY PLAYER WHO IS NOT CURRENTLY ONLINE, AND THAT IS THE WHOLE
+SECURITY OF THIS FEATURE.
+
+The name is substituted into a console command. A game console is where ban, op,
+give and stop live, and most games allow spaces in a display name — so a "player"
+called `alice /op mallory` would turn `tell {player} {message}` into two
+commands, the second of which promotes an attacker to operator. Anybody with a
+forum account could do it.
+
+Requiring the name to be in the set this agent READ FROM THE SERVER'S OWN LOG
+closes that: the only names that can reach the template are ones the server
+itself printed as having joined. The character check below is the second line —
+it refuses a name that somehow contains something command-shaped even if a game
+did let somebody join under it.
+
+The code is checked too, though the forum generates it: a bug there must not be
+able to turn into a console injection either.
+*/
+func (w *Watcher) VerifyLine(player, code string) (string, error) {
+	if w.say == "" {
+		return "", fmt.Errorf("this server has no way to send a message to a player, so it cannot verify anybody")
+	}
+
+	if !safeForConsole(player) || !safeForConsole(code) {
+		return "", fmt.Errorf("that name cannot be used to send a console message")
+	}
+
+	w.mu.Lock()
+	_, online := w.online[player]
+	w.mu.Unlock()
+
+	if !online {
+		return "", fmt.Errorf("%q is not in the game right now — join the server and try again", player)
+	}
+
+	message := strings.ReplaceAll(w.verify, "{code}", code)
+
+	return w.Say(player, message), nil
+}
+
+/*
+safeForConsole rejects anything that could end one console command and start
+another.
+
+🚨 A denylist of characters rather than an allowlist of names, because player
+names in the games this supports legitimately contain spaces, accents, hyphens
+and brackets — an allowlist strict enough to be safe would refuse a large share
+of real players. What must never get through is the punctuation a game console
+or a wrapper shell treats as a separator.
+
+A line break above all: it turns one command into two in every console there is,
+which is exactly the injection this function exists to stop. Semicolons and
+ampersands chain commands in several server consoles and in any wrapper that
+hands the line to a shell; pipes redirect; quotes and backticks change how a
+shell parses the rest. A leading slash would make a name look like a command to
+games that prefix theirs.
+*/
+func safeForConsole(value string) bool {
+	if value == "" || len(value) > 64 {
+		return false
+	}
+
+	const dangerous = "\r\n;|&$`\"'"
+
+	if strings.ContainsAny(value, dangerous) {
+		return false
+	}
+
+	return !strings.HasPrefix(strings.TrimSpace(value), "/")
 }
 
 // CanSay reports whether in-game verification is possible on this server.
