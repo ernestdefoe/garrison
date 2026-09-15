@@ -240,6 +240,27 @@ class AdminController implements RequestHandlerInterface
         $server->icon_attempts = 0;
         $server->save();
 
+        /**
+         * An operator-supplied URL covers every game Garrison has no catalogue
+         * entry for — Minecraft included, which has no Steam page and is the
+         * most common dedicated server there is. Downloaded and kept, exactly
+         * like the catalogue path: never a hotlink.
+         */
+        $given = trim((string) (($request->getParsedBody() ?? [])['url'] ?? ''));
+
+        if ($given !== '') {
+            $reason = null;
+            $url = $this->artwork->fetchFrom($server, $given, $reason);
+
+            if ($url === null) {
+                throw new ValidationException([
+                    'icon' => $this->translator->trans('ernestdefoe-garrison.api.errors.' . ($reason ?: 'fetch_failed')),
+                ]);
+            }
+
+            return new JsonResponse(['iconUrl' => $url]);
+        }
+
         $url = $this->artwork->fetch($server);
 
         if ($url === null) {

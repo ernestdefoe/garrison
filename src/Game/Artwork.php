@@ -4,6 +4,7 @@ namespace ErnestDefoe\Garrison\Game;
 
 use Carbon\Carbon;
 use ErnestDefoe\Garrison\Model\Server;
+use ErnestDefoe\Garrison\Game\RemoteImage;
 use Illuminate\Contracts\Filesystem\Factory;
 
 /**
@@ -95,6 +96,39 @@ class Artwork
         $server->save();
 
         return null;
+    }
+
+    /**
+     * Fetch from a URL the operator supplied.
+     *
+     * 🚨 Guarded by RemoteImage first. "Fetch this URL" hands the forum's own
+     * network position to whoever typed the address; without the check,
+     * http://127.0.0.1:6379/ and cloud metadata endpoints become things the
+     * forum will connect to from inside the network.
+     *
+     * @return string|null the stored URL, or null with $reason set
+     */
+    public function fetchFrom(Server $server, string $url, ?string &$reason = null): ?string
+    {
+        $reason = RemoteImage::reject($url);
+
+        if ($reason !== null) {
+            return null;
+        }
+
+        $bytes = $this->download($url);
+
+        if ($bytes === null) {
+            $reason = 'fetch_failed';
+
+            return null;
+        }
+
+        $stored = $this->keep($server, $bytes[0], $bytes[1]);
+        $server->icon_attempts = 0;
+        $server->save();
+
+        return $stored;
     }
 
     /**

@@ -224,7 +224,6 @@ export default class GarrisonPage extends ExtensionPage {
 
               <label className="GarrisonAdmin-iconLabel">
                 <span>{this.t('icon')}</span>
-                {/* A file input, not a URL box — a URL rots. */}
                 <input
                   type="file"
                   accept="image/png,image/jpeg,image/gif,image/webp"
@@ -234,8 +233,38 @@ export default class GarrisonPage extends ExtensionPage {
             </div>
           </div>
 
+          {/*
+            🚨 The catch-all, and the reason it exists: Minecraft has no Steam
+            page and is the most common dedicated server there is. Rather than
+            guess a URL per game — the one I tried was unreachable when checked
+            from the forum host — an operator pastes a link once. It is
+            DOWNLOADED and kept, exactly like the catalogue path, so it can
+            never break later.
+          */}
+          <div className="GarrisonAdmin-iconUrl">
+            <label for={`garrison-${s.id}-logo-url`}>{this.t('logo_url')}</label>
+            <div className="GarrisonAdmin-iconUrlRow">
+              <input
+                id={`garrison-${s.id}-logo-url`}
+                className="FormControl"
+                placeholder="https://…"
+                value={s.logoUrlDraft || ''}
+                oninput={(e) => { s.logoUrlDraft = e.target.value; }}
+              />
+              {Button.component(
+                {
+                  className: 'Button',
+                  loading: this.fetching === s.id,
+                  disabled: !s.logoUrlDraft,
+                  onclick: () => this.fetchLogo(s, s.logoUrlDraft),
+                },
+                this.t('fetch')
+              )}
+            </div>
+          </div>
+
           <span className="GarrisonAdmin-meta">
-            {s.canFetchLogo ? this.t('fetch_logo_help') : this.t('icon_help')}
+            {s.canFetchLogo ? this.t('fetch_logo_help') : this.t('logo_url_help')}
           </span>
         </div>
       </div>
@@ -356,16 +385,18 @@ export default class GarrisonPage extends ExtensionPage {
       });
   }
 
-  fetchLogo(server) {
+  fetchLogo(server, url) {
     this.fetching = server.id;
 
     app
       .request({
         method: 'POST',
         url: app.forum.attribute('apiUrl') + '/garrison/admin/servers/' + server.id + '/fetch-icon',
+        body: url ? { url } : {},
       })
       .then((res) => {
         server.iconUrl = res.iconUrl;
+        server.logoUrlDraft = '';
         this.fetching = null;
         m.redraw();
       })

@@ -9,7 +9,11 @@ ernestdefoe-garrison:
       not_an_image: That is not an image Garrison can use. PNG, JPEG, GIF or WebP.
       too_large: That image is over 512 KB. Use a smaller one.
       no_artwork: Garrison does not know where to find artwork for this game. Upload an image instead.
-      fetch_failed: Could not fetch the logo. Upload one instead.
+      fetch_failed: Could not fetch that image. Upload one instead.
+      not_a_url: That is not a web address.
+      bad_scheme: Only http and https addresses can be fetched.
+      unresolvable: That address does not resolve to anything.
+      private_address: That address points inside this network, so Garrison will not fetch it.
 
   forum:
     # 🚨 Every user-facing string lives here. Zero hardcoded English anywhere
@@ -87,6 +91,9 @@ ernestdefoe-garrison:
     icon_help: PNG, JPEG, GIF or WebP, up to 512 KB. Uploaded and kept here, so it cannot disappear later.
     fetch_logo: Fetch the real logo
     fetch_logo_help: Downloads the game's own logo and keeps a copy on this forum. Not a hotlink — it cannot break later.
+    logo_url: Or paste an image address
+    logo_url_help: For games Garrison does not know, paste a link to the logo. It is downloaded and kept here, so it cannot break later.
+    fetch: Fetch
 
     incidents: Recent incidents
     no_incidents: Nothing has gone wrong yet.

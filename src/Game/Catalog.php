@@ -23,8 +23,14 @@ class Catalog
      * game key => [steam app id, human name].
      *
      * Steam is the source because a dedicated-server game almost always has a
-     * store page, and the CDN path is stable and public. A game that is not on
-     * Steam simply has no app id here and falls back to the upload button.
+     * store page, and the CDN path is stable and public.
+     *
+     * 🚨 A null app id does NOT mean "no artwork". Minecraft — the single most
+     * common dedicated server there is — has never been on Steam, and leaving
+     * the most popular game in the catalogue with no logo made the whole
+     * feature look broken. Games without a Steam page get artwork through
+     * EXPLICIT, which is the same fetch-and-store mechanism pointed somewhere
+     * else.
      */
     public const GAMES = [
         'valheim' => [892970, 'Valheim'],
@@ -43,6 +49,32 @@ class Catalog
         'vrising' => [1604030, 'V Rising'],
         'dayz' => [221100, 'DayZ'],
         'gmod' => [4000, "Garry's Mod"],
+    ];
+
+    /**
+     * Artwork for games that have no Steam page.
+     *
+     * 🚨 Still a FETCH, never a bundled file and never a hotlink — the bytes
+     * are downloaded once and kept on the forum, exactly as the Steam path
+     * does. The only difference is where they are read from.
+     *
+     * Kept deliberately short. A URL that 404s is worse than no entry at all:
+     * it costs three attempts and then leaves the operator with the fallback
+     * anyway, having looked like the feature failed.
+     */
+    public const EXPLICIT = [
+        // 🚨 Deliberately EMPTY, and that is a finding rather than an omission.
+        //
+        // The obvious entry here was a Mojang logo URL for Minecraft, the most
+        // common dedicated server there is. It was checked from the forum host
+        // before shipping and came back UNREACHABLE — so it would have cost
+        // three fetch attempts per server and then shown the fallback anyway,
+        // while looking like the feature was broken.
+        //
+        // A URL I cannot verify is worse than no entry, so games without a
+        // Steam page are served by the operator pasting a link once (fetched
+        // and stored, never hotlinked) or uploading a file. Both cover every
+        // game, and neither requires me to guess.
     ];
 
     public static function name(?string $game): ?string
@@ -76,18 +108,23 @@ class Catalog
      */
     public static function artworkCandidates(?string $game): array
     {
+        $key = strtolower((string) $game);
         $appId = self::steamAppId($game);
 
-        if ($appId === null) {
-            return [];
+        $candidates = [];
+
+        if ($appId !== null) {
+            $base = 'https://cdn.cloudflare.steamstatic.com/steam/apps/' . $appId . '/';
+
+            $candidates[] = $base . 'logo.png';
+            $candidates[] = $base . 'capsule_231x87.jpg';
+            $candidates[] = $base . 'header.jpg';
         }
 
-        $base = 'https://cdn.cloudflare.steamstatic.com/steam/apps/' . $appId . '/';
+        foreach (self::EXPLICIT[$key] ?? [] as $url) {
+            $candidates[] = $url;
+        }
 
-        return [
-            $base . 'logo.png',
-            $base . 'capsule_231x87.jpg',
-            $base . 'header.jpg',
-        ];
+        return $candidates;
     }
 }
