@@ -20,14 +20,31 @@
 .GarrisonServer {
   align-items: center;
   display: flex;
-  gap: 8px;
   font-size: 14px;
+  gap: 4px 8px;
 
-  // The sidebar has one line per server, so a wide wordmark is capped to
-  // something that still leaves the name readable.
+  /*
+   * 🚨 WRAPS rather than competing for a fixed width.
+   *
+   * This row lives in at least four containers of different widths — the stock
+   * sidebar, a fof/forum-widgets-core panel, a Bespoke zone and a Page Builder
+   * block — and no set of min-widths is right in all of them. Tuned for the
+   * sidebar, the name came out as "Bare-metal …" inside the narrower fof
+   * panel, with the status cut to "N". Letting the status drop to a second
+   * line keeps the NAME whole everywhere, which is the thing somebody is
+   * actually looking for.
+   */
+  flex-wrap: wrap;
+
+  /*
+   * A wordmark is wide and a widget column is narrow, so the logo is capped
+   * hard here — the server's NAME is what somebody scans for, and a logo that
+   * eats it has won the wrong trade. On the status page, where there is room,
+   * the same logo gets 150px.
+   */
   .GarrisonMark--custom {
-    max-height: 18px;
-    max-width: 48px;
+    max-height: 16px;
+    max-width: 34px;
   }
 }
 
@@ -53,17 +70,30 @@
   flex: 0 1 auto;
   font-size: 12px;
   font-variant-numeric: tabular-nums;
-  min-width: 0;
-  overflow: hidden;
-  text-align: right;
-  text-overflow: ellipsis;
+  // Pushed right when it shares the line, and simply on the next line when it
+  // cannot. Never truncated: a status cut to "N" says nothing at all.
+  margin-left: auto;
   white-space: nowrap;
 }
 
+/*
+ * The identity group: dot, mark, name. Never breaks up, and takes the whole
+ * line when the status cannot fit beside it.
+ */
+.GarrisonServer-identity {
+  align-items: center;
+  display: flex;
+  flex: 1 1 60%;
+  gap: 8px;
+  min-width: 0;
+}
+
 .GarrisonServer-name {
-  // Never below this, or the mark and the status squeeze it to an ellipsis.
   flex: 1 1 auto;
-  min-width: 7em;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /*

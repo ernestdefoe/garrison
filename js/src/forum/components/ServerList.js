@@ -74,13 +74,21 @@ export default class ServerList extends Component {
 
     return (
       <li className={'GarrisonServer' + (stale ? ' GarrisonServer--stale' : '')} key={s.id}>
-        <span
-          className={`GarrisonServer-state GarrisonServer-state--${s.state}`}
-          aria-hidden="true"
-        />
-        {serverMark(s, 18)}
-        <span className="GarrisonServer-name" title={s.name}>
-          {s.name}
+        {/*
+          🚨 The dot, the mark and the name are ONE group that never breaks up.
+          Left to wrap freely they took three lines in a narrow fof panel — the
+          mark alone on one, the name on another, the status on a third — which
+          reads as a broken layout. Only the status may drop to a second line.
+        */}
+        <span className="GarrisonServer-identity">
+          <span
+            className={`GarrisonServer-state GarrisonServer-state--${s.state}`}
+            aria-hidden="true"
+          />
+          {serverMark(s, 18)}
+          <span className="GarrisonServer-name" title={s.name}>
+            {s.name}
+          </span>
         </span>
         <span className="GarrisonServer-players">{this.detail(s, stale)}</span>
       </li>
