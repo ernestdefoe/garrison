@@ -32,6 +32,11 @@ console, its backups and its settings — at a URL you can link to. Every alert
 links straight here, because "Shattered Pact stopped accepting players" followed
 by a list of eleven servers is a search task at the worst possible moment.
 
+`/garrison` and `/garrison/s/:id` are ordinary Flarum routes that Garrison
+registers itself. They use your theme, your permissions and your login, and they
+work on a forum with nothing else installed — there is no page builder, no CMS
+and no template to assemble first.
+
 ![A server's own page](screenshots/server-page.png)
 
 ### Backups you can actually restore from
@@ -87,10 +92,12 @@ day without being three lines from the RCON password. Comments in the file becom
 the help text. Editing rewrites one line in place, so your annotated config stays
 annotated.
 
-### Widgets, wherever you keep them
+### A widget too, wherever you keep widgets
 
-Flarum's own sidebar, [fof/forum-widgets-core], [Bespoke] and [Page Builder] —
-all four, none of them required.
+Separately from the pages above — which need nothing — Garrison offers a compact
+server-status widget to Flarum's own sidebar, [fof/forum-widgets-core],
+[Bespoke] and [Page Builder]. The stock sidebar is built in and needs no extra
+extension; the other three are picked up only if you already run them.
 
 ![The sidebar widget](screenshots/widget.png)
 
@@ -176,6 +183,8 @@ Garrison tells you on its admin page if it is missing.
 - PHP **8.3+**
 - A game host you can run a small binary on (Linux x86-64 or arm64)
 - Docker **optional**
+
+No other Flarum extension is required.
 
 ## Licence & support
 

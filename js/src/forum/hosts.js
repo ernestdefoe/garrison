@@ -24,34 +24,21 @@ function flarumGlobal() {
 /**
  * Register with every host that is present.
  *
+ * 🚨 Registering with a host is NOT placing a widget in it. Every host here
+ * gives the operator the OPTION of a Garrison widget; whether they took it is
+ * answered later, by placement.js, from mounts that actually exist. An earlier
+ * version answered it here — and a forum with Bespoke installed but no
+ * Garrison block placed got no widget anywhere at all, because the stock
+ * sidebar had stood down for a placement nobody made.
+ *
  * @param {object} app
- * @param {() => any} makeContent renders the shared ServerList
+ * @param {(host: string) => any} makeContent renders the shared ServerList,
+ *   tagged with the host placing it
  */
 export default function registerWidgetHosts(app, makeContent) {
-  let hosted = false;
-
-  hosted = registerFofWidget(app, makeContent) || hosted;
-  hosted = registerBespoke(app, makeContent) || hosted;
-
-  /*
-   * 🚨 Page Builder's return value is deliberately DISCARDED.
-   *
-   * Its blocks are placed on specific pages, so a forum with a Garrison block
-   * on one page still wants the sidebar everywhere else. Counting it as
-   * "hosted elsewhere" would make placing the block once remove the widget
-   * from the entire rest of the forum — a change nobody asked for, made by an
-   * unrelated action, which is the worst kind.
-   */
+  registerFofWidget(app, makeContent);
+  registerBespoke(app, makeContent);
   registerPageBuilder(app, makeContent);
-
-  /*
-   * 🚨 When a widget framework is managing placement, the stock sidebar mount
-   * stands down — otherwise the same list is on the page twice and the second
-   * copy looks like a bug in whichever framework the operator just installed.
-   * Page Builder is deliberately NOT counted: its blocks are placed on
-   * specific pages, so the sidebar is still wanted everywhere else.
-   */
-  globalThis.__garrisonHostedElsewhere = hosted;
 }
 
 /**
@@ -90,7 +77,7 @@ function registerFofWidget(app, makeContent) {
     }
 
     content() {
-      return makeContent();
+      return makeContent('fof');
     }
   }
 
@@ -145,7 +132,7 @@ function registerPageBuilder(app, makeContent) {
 
         return (
           <div className={'GarrisonPageBuilderBlock' + (settings.compact ? ' is-compact' : '')}>
-            {makeContent()}
+            {makeContent('page-builder')}
           </div>
         );
       },
@@ -203,7 +190,7 @@ function registerBespoke(app, makeContent) {
         return (
           <div className="GarrisonBespokeWidget">
             {heading ? <h4 className="GarrisonSidebar-title">{heading}</h4> : null}
-            {makeContent()}
+            {makeContent('bespoke')}
           </div>
         );
       },

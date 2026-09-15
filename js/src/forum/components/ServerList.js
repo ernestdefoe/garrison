@@ -4,6 +4,7 @@ import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import humanTime from 'flarum/common/helpers/humanTime';
 
 import { serverMark } from '../marks';
+import { claim, release, SIDEBAR } from '../placement';
 import { all, isLoaded, lastError, subscribe } from '../store';
 
 /**
@@ -19,11 +20,20 @@ export default class ServerList extends Component {
   oninit(vnode) {
     super.oninit(vnode);
     this.unsubscribe = null;
+
+    /*
+     * 🚨 Read ONCE and kept, rather than read from attrs at teardown. A host
+     * that re-renders with different attrs would otherwise release a mount it
+     * never claimed and leave the real one counted for ever — which, since the
+     * count is what silences the sidebar, means a sidebar that never returns.
+     */
+    this.host = this.attrs.host || SIDEBAR;
   }
 
   oncreate(vnode) {
     super.oncreate(vnode);
     this.unsubscribe = subscribe(() => {});
+    claim(this.host);
   }
 
   onremove(vnode) {
@@ -31,6 +41,7 @@ export default class ServerList extends Component {
     // Leaving the page must stop the polling, or a forum tab open overnight
     // keeps asking for ever.
     if (this.unsubscribe) this.unsubscribe();
+    release(this.host);
   }
 
   view() {

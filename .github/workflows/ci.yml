@@ -73,3 +73,29 @@ jobs:
         run: |
           composer install --no-interaction --no-progress
           vendor/bin/phpunit
+
+  js:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+
+      # 🚨 The placement accounting, which decides whether the stock sidebar
+      # shows the widget. Every way it can be wrong is silent: a mis-count
+      # either hides the widget on every page or draws it twice, and neither
+      # throws anything. A forum with Bespoke installed but no Garrison block
+      # placed once got the widget nowhere at all, and the only symptom was an
+      # absence.
+      - name: Unit tests
+        working-directory: js
+        run: node --test tests/
+
+      # A bundle that does not build is an extension that cannot be released,
+      # and webpack failures here are usually a bad import path — which is the
+      # one class of mistake that takes the forum's whole JS down.
+      - name: Build the bundle
+        working-directory: js
+        run: |
+          npm ci --no-audit --no-fund || npm install --no-audit --no-fund
+          npm run build

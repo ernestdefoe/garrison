@@ -10,6 +10,7 @@ import ProfilePlaytime from './components/ProfilePlaytime';
 import ServerPage from './components/ServerPage';
 import ServersPage from './components/ServersPage';
 import registerWidgetHosts from './hosts';
+import { hostedElsewhere } from './placement';
 
 /**
  * 🚨 Every host is optional. Garrison must render with none of the four widget
@@ -83,7 +84,7 @@ app.initializers.add('ernestdefoe-garrison', () => {
     items.add('garrison', <ProfilePlaytime user={user} />, -10);
   });
 
-  registerWidgetHosts(app, () => <ServerList />);
+  registerWidgetHosts(app, (host) => <ServerList host={host} />);
 
   /*
    * The stock Flarum sidebar — the floor, and the only one that needs nothing
@@ -95,9 +96,17 @@ app.initializers.add('ernestdefoe-garrison', () => {
    * another extension.
    */
   extend('flarum/forum/components/IndexSidebar', 'items', function (items) {
-    // Only the stock sidebar is skipped when a widget framework is managing
-    // placement, or the same list appears twice on the same page.
-    if (window.__garrisonHostedElsewhere) return;
+    /*
+     * 🚨 Asked of PLACEMENT, not of what is installed.
+     *
+     * The stock sidebar steps aside only when another host is actually showing
+     * the list on this page — never merely because a widget framework is
+     * installed. Getting that backwards is how a forum ends up with the widget
+     * nowhere: Bespoke present, no Garrison block placed, sidebar suppressed
+     * for a copy that does not exist. Two copies is a bug you can see; zero
+     * copies is one you cannot.
+     */
+    if (hostedElsewhere()) return;
 
     items.add(
       'garrison',
