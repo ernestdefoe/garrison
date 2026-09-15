@@ -155,12 +155,23 @@ class Gateway
             return;
         }
 
-        $server = Server::query()->firstOrNew([
-            'agent_id' => $agent->id,
-            'ref' => $ref,
-        ]);
+        /**
+         * 🚨 Looked up and assigned field by field, never firstOrNew() with an
+         * array. Flarum's AbstractModel guards mass assignment, so the array
+         * form throws MassAssignmentException — but the better reason is that
+         * this data comes from a REMOTE agent. Assigning explicitly means the
+         * set of columns an agent can influence is visible in this method and
+         * cannot widen by someone adding a field to the payload later.
+         */
+        $server = Server::query()
+            ->where('agent_id', $agent->id)
+            ->where('ref', $ref)
+            ->first();
 
-        if (! $server->exists) {
+        if ($server === null) {
+            $server = new Server();
+            $server->agent_id = $agent->id;
+            $server->ref = $ref;
             $server->name = (string) ($report['name'] ?? $ref);
             $server->created_at = Carbon::now();
         }

@@ -1,0 +1,68 @@
+/*
+ * 🚨 Nothing here redefines a core CSS variable at :root. A theme sets those,
+ * and an extension that overwrites one changes the whole forum rather than its
+ * own corner of it.
+ */
+
+.GarrisonWidget {
+  margin-bottom: 15px;
+}
+
+.GarrisonWidget-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.GarrisonServer {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.GarrisonServer-name {
+  color: var(--heading-color);
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.GarrisonServer-players {
+  color: var(--muted-color);
+  flex: none;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * State is carried by shape as well as colour — a dot alone fails for anybody
+ * who cannot separate the two, and "is it up" is the one thing this widget
+ * exists to answer.
+ */
+.GarrisonServer-state {
+  border-radius: 50%;
+  flex: none;
+  height: 9px;
+  width: 9px;
+  background: var(--muted-color);
+
+  &--running { background: #2d7550; }
+  &--crashed { background: var(--error-color); }
+  &--starting,
+  &--stopping { background: #93670a; }
+}
+
+/*
+ * 🚨 A stale row says so rather than confidently showing a memory. A panel
+ * displaying a twenty-minute-old "running" is how a twenty-hour outage goes
+ * unnoticed — which is the exact failure this product exists to prevent.
+ */
+.GarrisonServer--stale {
+  opacity: 0.55;
+}

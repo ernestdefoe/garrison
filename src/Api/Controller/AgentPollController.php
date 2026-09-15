@@ -74,7 +74,18 @@ class AgentPollController implements RequestHandlerInterface
                 'id' => $c->id,
                 'verb' => $c->verb,
                 'server' => $c->server_ref,
-                'params' => $c->paramsArray(),
+
+                /*
+                 * 🚨 (object) is load-bearing. PHP encodes an empty array as
+                 * `[]`, and the agent unmarshals params into a STRUCT — which
+                 * fails on a JSON array, so every command with no parameters
+                 * came back `bad_request`. Found by running it: `server.stop`
+                 * with no explicit grace failed while `server.start`, which
+                 * reads no params, succeeded. A typed client and an untyped
+                 * encoder disagree exactly here, and only ever on the empty
+                 * case, which is the one nobody writes a test for.
+                 */
+                'params' => (object) $c->paramsArray(),
             ], $commands),
             'pollSeconds' => Gateway::POLL_SECONDS,
         ]);

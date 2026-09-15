@@ -19,7 +19,9 @@ ernestdefoe-garrison:
     stale: "Last heard from {when}"
     players: "{count, plural, one {# player} other {# players}} online"
     no_servers: No game servers are set up yet.
+    unreachable: Could not reach the forum for server status.
     join_hidden: Join details are not shown to your group.
+    widget_heading: Heading
 
   admin:
     title: Garrison
