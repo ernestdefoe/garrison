@@ -18,6 +18,7 @@ import (
 	"github.com/ernestdefoe/garrison/internal/health"
 	"github.com/ernestdefoe/garrison/internal/offsite"
 	"github.com/ernestdefoe/garrison/internal/protocol"
+	"github.com/ernestdefoe/garrison/internal/settings"
 )
 
 // Server is one managed game server, as configured on the agent.
@@ -95,6 +96,17 @@ type Server struct {
 	 * The forum is told WHETHER copies are landing. It is never told how.
 	 */
 	Offsite offsite.Config `json:"offsite,omitempty"`
+
+	/*
+	 * Configuration files the forum may read and, where allowed, change.
+	 *
+	 * 🚨 A DECLARED LIST, and the absence of a file manager is the feature.
+	 * The forum names a file by its id from this list; a path never reaches
+	 * the agent. An operator who wants staff editing the message of the day
+	 * lists server.properties with `keys: ["motd"]`, and the RCON password
+	 * three lines below it stays unreachable.
+	 */
+	Config []settings.File `json:"config,omitempty"`
 }
 
 // DefaultStopGrace is used when a server does not set one. Valheim's own save

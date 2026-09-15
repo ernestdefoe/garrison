@@ -652,3 +652,90 @@
     display: block;
   }
 }
+
+/*
+ * Server settings.
+ */
+.GarrisonSettings {
+  margin-top: 24px;
+}
+
+.GarrisonSettings h3 {
+  font-size: 15px;
+  margin: 0 0 8px;
+}
+
+.GarrisonSettings-files {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 12px;
+
+  .is-open {
+    font-weight: 600;
+    text-decoration: underline;
+  }
+}
+
+.GarrisonSettings-entry {
+  border-top: 1px solid var(--control-bg);
+  padding: 10px 0;
+
+  label {
+    display: block;
+    font-weight: 600;
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+}
+
+/*
+ * 🚨 A locked setting is DIMMED and still shown, never hidden.
+ *
+ * An operator looking for a setting that is not on screen concludes the panel
+ * is incomplete and goes to edit the file by hand — which is the outcome this
+ * whole feature exists to avoid. Showing it greyed says "this exists, and
+ * somebody decided you may not change it", which is a different and true thing.
+ */
+.GarrisonSettings-entry.is-locked {
+  opacity: 0.65;
+}
+
+.GarrisonSettings-section {
+  color: var(--muted-color);
+  font-weight: normal;
+
+  &::after {
+    content: ' · ';
+  }
+}
+
+.GarrisonSettings-help {
+  color: var(--muted-color);
+  display: block;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.GarrisonSettings-control {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+
+  .FormControl {
+    /* Shrinks before the button does: a button that wraps under a field reads
+       as a separate control rather than that field's Save. */
+    flex: 1 1 120px;
+    min-width: 0;
+  }
+}
+
+.GarrisonSettings-error {
+  border-inline-start: 3px solid var(--alert-error-color, #d14848);
+  margin: 8px 0;
+  padding: 6px 10px;
+}
+
+.GarrisonSettings-empty {
+  color: var(--muted-color);
+}

@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/ernestdefoe/garrison/internal/driver"
 	"github.com/ernestdefoe/garrison/internal/protocol"
+	"github.com/ernestdefoe/garrison/internal/settings"
 )
 
 // fakeDriver records what it was asked to do, so a test can assert that a
@@ -327,5 +329,99 @@ func TestStatusShipsBackupsNewestFirstAndCapped(t *testing.T) {
 		if got[i].At.After(got[i-1].At) {
 			t.Fatalf("backup %d is newer than the one before it — the list is not newest-first", i)
 		}
+	}
+}
+
+/*
+🚨 The config verbs must not have widened the security boundary.
+
+Adding verbs is the moment a closed set stops being closed, and the whole
+argument for this design is that a fully compromised forum can only ask for
+things on the list. config.set writes a FILE on a game host, which is the most
+dangerous thing on that list, so it is worth asserting out loud that the id is
+the only way a path is produced and that nothing outside the declared list
+resolves.
+*/
+func TestConfigVerbsCannotReachAnUndeclaredFile(t *testing.T) {
+	dir := t.TempDir()
+	declared := filepath.Join(dir, "server.properties")
+
+	if err := os.WriteFile(declared, []byte("motd=hello\n"), 0o640); err != nil {
+		t.Fatal(err)
+	}
+
+	victim := filepath.Join(dir, "victim.conf")
+
+	if err := os.WriteFile(victim, []byte("untouched=yes\n"), 0o640); err != nil {
+		t.Fatal(err)
+	}
+
+	a, err := New(context.Background(),
+		[]driver.Server{{
+			ID: "srv", Name: "Server", Driver: "fake",
+			Config: []settings.File{{ID: "props", Path: declared, Format: settings.FormatProperties}},
+		}},
+		driver.Set{"fake": &fakeDriver{name: "fake"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, file := range []string{victim, "victim.conf", "../victim.conf", "props/../victim.conf", ""} {
+		params, _ := json.Marshal(protocol.ConfigParams{File: file, Key: "untouched", Value: "owned"})
+
+		res := a.Handle(context.Background(), protocol.Request{
+			ID: "1", Verb: protocol.VerbConfigSet, Server: "srv", Params: params,
+		}, func(protocol.Event) {})
+
+		if res.OK {
+			t.Errorf("config.set reached %q", file)
+		}
+	}
+
+	after, _ := os.ReadFile(victim)
+
+	if string(after) != "untouched=yes\n" {
+		t.Fatalf("a file outside the declared list was written: %s", after)
+	}
+}
+
+// And the declared one does work, so the test above is not passing because
+// config.set is broken for everything.
+func TestConfigSetWorksOnADeclaredFile(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "server.properties")
+
+	if err := os.WriteFile(path, []byte("# the motd\nmotd=hello\n"), 0o640); err != nil {
+		t.Fatal(err)
+	}
+
+	a, err := New(context.Background(),
+		[]driver.Server{{
+			ID: "srv", Name: "Server", Driver: "fake",
+			Config: []settings.File{{ID: "props", Path: path, Format: settings.FormatProperties}},
+		}},
+		driver.Set{"fake": &fakeDriver{name: "fake"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	params, _ := json.Marshal(protocol.ConfigParams{File: "props", Key: "motd", Value: "Shattered Pact"})
+
+	res := a.Handle(context.Background(), protocol.Request{
+		ID: "1", Verb: protocol.VerbConfigSet, Server: "srv", Params: params,
+	}, func(protocol.Event) {})
+
+	if !res.OK {
+		t.Fatalf("config.set on a declared file failed: %+v", res.Error)
+	}
+
+	after, _ := os.ReadFile(path)
+
+	if !strings.Contains(string(after), "motd=Shattered Pact") {
+		t.Fatalf("the value was not written: %s", after)
+	}
+
+	if !strings.Contains(string(after), "# the motd") {
+		t.Fatalf("the comment was lost: %s", after)
 	}
 }

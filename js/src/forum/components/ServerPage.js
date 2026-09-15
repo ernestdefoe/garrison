@@ -7,6 +7,7 @@ import humanTime from 'flarum/common/helpers/humanTime';
 import Backups from './Backups';
 import Console from './Console';
 import ServerControls from './ServerControls';
+import Settings from './Settings';
 import { bytes } from '../format';
 import { serverMark } from '../marks';
 import { byId, isLoaded, lastError, subscribe } from '../store';
@@ -149,6 +150,17 @@ export default class ServerPage extends Page {
        * that hides things.
        */
       s.backups !== undefined ? <Backups server={s} key="backups" /> : null,
+
+      /*
+       * 🚨 Settings sit at the BOTTOM, below the backups.
+       *
+       * The order is the order somebody works in, and it is also a safety
+       * ordering: by the time an operator reaches the settings they have seen
+       * the state, read the console and been shown that a backup exists. A
+       * config editor placed above all that invites changing a port number
+       * before anybody has looked at why the server is unhappy.
+       */
+      s.canConfig ? <Settings server={s} key="settings" /> : null,
     ];
   }
 

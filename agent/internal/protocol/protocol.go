@@ -55,6 +55,20 @@ const (
 	VerbBackupList    Verb = "backup.list"
 	VerbBackupRestore Verb = "backup.restore"
 	VerbBackupDelete  Verb = "backup.delete"
+
+	/*
+	 * Configuration.
+	 *
+	 * 🚨 There is no config.read-any-file and no config.write-any-file, and
+	 * that absence is the feature. These operate on an ID from a list the
+	 * OPERATOR declared on the host; a path never crosses this wire in either
+	 * direction. A file manager here would be arbitrary write access on a
+	 * machine that runs a start script, reachable from a PHP forum on the
+	 * public internet — which is arbitrary code execution with extra steps.
+	 */
+	VerbConfigList Verb = "config.list"
+	VerbConfigGet  Verb = "config.get"
+	VerbConfigSet  Verb = "config.set"
 )
 
 // known is the entire set of verbs this agent will ever dispatch.
@@ -77,6 +91,9 @@ var known = map[Verb]struct{}{
 	VerbBackupList:    {},
 	VerbBackupRestore: {},
 	VerbBackupDelete:  {},
+	VerbConfigList:    {},
+	VerbConfigGet:     {},
+	VerbConfigSet:     {},
 }
 
 // Known reports whether v is a verb this agent implements. Everything else is
@@ -199,6 +216,19 @@ type SendParams struct {
 // generates, so there is no shape of this field that names a path.
 type BackupParams struct {
 	ID string `json:"id"`
+}
+
+// ConfigParams is the payload of config.get and config.set.
+//
+// 🚨 `File` is an ID from the operator's declared list, never a path. `Key`
+// must already exist in that file — the agent refuses to create settings,
+// because a typo would otherwise add one the game ignores and the operator
+// would see it saved, see no effect, and conclude the panel is broken.
+type ConfigParams struct {
+	File    string `json:"file"`
+	Section string `json:"section,omitempty"`
+	Key     string `json:"key,omitempty"`
+	Value   string `json:"value,omitempty"`
 }
 
 // ---- results -------------------------------------------------------------

@@ -43,6 +43,9 @@ class Dispatcher
         'backup.list',
         'backup.restore',
         'backup.delete',
+        'config.list',
+        'config.get',
+        'config.set',
     ];
 
     /**
@@ -55,6 +58,7 @@ class Dispatcher
         'server.restart',
         'console.send',
         'backup.create',
+        'config.set',
     ];
 
     /**
@@ -143,6 +147,26 @@ class Dispatcher
         // authority — ban, op, give items — and an operator may reasonably
         // want somebody who can restart a server but not do that.
         if ($verb === 'console.send' && ! $actor->hasPermission('garrison.console')) {
+            throw new ValidationException([
+                'verb' => $this->translator->trans('ernestdefoe-garrison.api.errors.not_permitted'),
+            ]);
+        }
+
+        /*
+         * 🚨 And configuration gets its own gate, for the same reason again.
+         *
+         * Changing the message of the day and restarting a server are
+         * unrelated kinds of trust. The agent already constrains WHICH files
+         * and which keys are reachable, so this is not the only protection —
+         * but a community that wants a moderator updating the MOTD should not
+         * have to hand them the ability to restart during a raid, and the
+         * reverse is just as true.
+         *
+         * Reading is gated too, not only writing: a config file an operator
+         * declared read-only is still their server's internals, and
+         * `garrison.view` means "see the servers", not "see inside them".
+         */
+        if (str_starts_with($verb, 'config.') && ! $actor->hasPermission('garrison.config')) {
             throw new ValidationException([
                 'verb' => $this->translator->trans('ernestdefoe-garrison.api.errors.not_permitted'),
             ]);

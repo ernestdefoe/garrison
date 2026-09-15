@@ -65,6 +65,14 @@ export default [
     )
     .permission(
       () => ({
+        icon: 'fas fa-sliders',
+        label: app.translator.trans('ernestdefoe-garrison.admin.permissions.config'),
+        permission: 'garrison.config',
+      }),
+      'moderate'
+    )
+    .permission(
+      () => ({
         icon: 'fas fa-tower-observation',
         label: app.translator.trans('ernestdefoe-garrison.admin.permissions.manage'),
         permission: 'garrison.manage',

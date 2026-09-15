@@ -161,6 +161,7 @@ class ListServersController implements RequestHandlerInterface
              * shown a Restore button that exists only to tell them no.
              */
             $row['canManage'] = $actor->hasPermission('garrison.manage');
+            $row['canConfig'] = $actor->hasPermission('garrison.config') || $actor->hasPermission('garrison.manage');
 
             return $row;
         })->values()->all();

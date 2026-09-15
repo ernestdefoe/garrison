@@ -134,6 +134,25 @@ ernestdefoe-garrison:
     join_password: Password
     join_code_label: Join code
 
+    # 🚨 `config`, NOT `settings`. Flarum reserves `forum.settings.*` for the
+    # rows on a USER's own settings page — this extension already has one there
+    # for the notification preference — and a second `settings:` block under
+    # the same parent is a DUPLICATE KEY, which makes the YAML parser throw and
+    # takes the whole forum API down with a 500. Found exactly that way.
+    #
+    # The operator declares which files and which keys are reachable, in the
+    # agent's own config on the game host. There is deliberately no file
+    # browser: on a machine that runs a start script, arbitrary write access is
+    # arbitrary code execution.
+    config:
+      title: Server settings
+      load: Load settings
+      none: This server has no settings files set up. They are declared in the agent's config file on the game host.
+      file_empty: There is nothing in this file.
+      read_only: These settings can be read but not changed.
+      locked: This one cannot be changed from here.
+      save: Save
+
     backups:
       title: Backups
       create: Back up now
@@ -298,4 +317,8 @@ ernestdefoe-garrison:
       view: See servers that are not marked public
       control: Start, stop and restart servers
       console: Send commands to a game console
+      # 🚨 Separate from control on purpose. A community that wants a moderator
+      # updating the message of the day should not have to hand them the
+      # ability to restart during a raid, and the reverse is just as true.
+      config: Read and change server settings
       manage: Manage Garrison, pair hosts, see everything

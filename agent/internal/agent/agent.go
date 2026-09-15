@@ -15,6 +15,7 @@ import (
 	"github.com/ernestdefoe/garrison/internal/health"
 	"github.com/ernestdefoe/garrison/internal/offsite"
 	"github.com/ernestdefoe/garrison/internal/protocol"
+	"github.com/ernestdefoe/garrison/internal/settings"
 )
 
 // Version is the agent build. The forum shows it, and an agent several
@@ -232,6 +233,62 @@ func (a *Agent) dispatch(ctx context.Context, req protocol.Request, srv driver.S
 		}
 
 		return result, nil
+
+	case protocol.VerbConfigList:
+		return map[string]any{"files": settings.List(srv.Config)}, nil
+
+	case protocol.VerbConfigGet:
+		var p protocol.ConfigParams
+		if derr := decode(req.Params, &p); derr != nil {
+			return nil, derr
+		}
+
+		file, ferr := settings.Find(srv.Config, p.File)
+		if ferr != nil {
+			return nil, protocol.Errf(protocol.CodeBadRequest, "%v", ferr)
+		}
+
+		set, rerr := settings.Read(file)
+		if rerr != nil {
+			return nil, protocol.Errf(protocol.CodeDriverFailed, "%v", rerr)
+		}
+
+		return set, nil
+
+	case protocol.VerbConfigSet:
+		var p protocol.ConfigParams
+		if derr := decode(req.Params, &p); derr != nil {
+			return nil, derr
+		}
+
+		file, ferr := settings.Find(srv.Config, p.File)
+		if ferr != nil {
+			return nil, protocol.Errf(protocol.CodeBadRequest, "%v", ferr)
+		}
+
+		if werr := settings.Write(file, p.Section, p.Key, p.Value); werr != nil {
+			/*
+			 * 🚨 CodeBadRequest, not CodeDriverFailed. Every refusal from
+			 * settings.Write is the caller asking for something it may not
+			 * have — a read-only file, a key outside the allowlist, a value
+			 * containing a newline, a key that does not exist. Reporting those
+			 * as a driver failure would put "the host had a problem" in front
+			 * of an operator whose actual problem is that they asked for the
+			 * wrong thing, and the message explains which.
+			 */
+			return nil, protocol.Errf(protocol.CodeBadRequest, "%v", werr)
+		}
+
+		// 🚨 The file back, read fresh from disk. A panel that echoed the
+		// value it just sent would show a successful save of something the
+		// file may not actually contain — and the one thing worth being sure
+		// of after editing a game config is what is now in it.
+		set, rerr := settings.Read(file)
+		if rerr != nil {
+			return nil, protocol.Errf(protocol.CodeDriverFailed, "%v", rerr)
+		}
+
+		return set, nil
 
 	case protocol.VerbBackupList:
 		cfg, err := backupConfig(srv)
