@@ -6,6 +6,7 @@ import LinkButton from 'flarum/common/components/LinkButton';
 import { GarrisonServer } from './models';
 import ServerIncidentNotification from './components/ServerIncidentNotification';
 import ServerList from './components/ServerList';
+import ProfilePlaytime from './components/ProfilePlaytime';
 import ServerPage from './components/ServerPage';
 import ServersPage from './components/ServersPage';
 import registerWidgetHosts from './hosts';
@@ -63,6 +64,23 @@ app.initializers.add('ernestdefoe-garrison', () => {
       icon: 'fas fa-triangle-exclamation',
       label: app.translator.trans('ernestdefoe-garrison.forum.settings.notify_garrisonServerIncident_label'),
     });
+  });
+
+  /*
+   * 🚨 On the profile, because that is where somebody looks somebody else up.
+   *
+   * The link between a forum account and an in-game character is the whole
+   * reason this product lives in a forum rather than beside one, and a profile
+   * is where a community actually asks "who is this?". Rendering nothing at
+   * all for the many members with no linked character keeps it out of the way
+   * of everybody it does not concern.
+   */
+  extend('flarum/forum/components/UserCard', 'infoItems', function (items) {
+    const user = this.attrs.user;
+
+    if (!user) return;
+
+    items.add('garrison', <ProfilePlaytime user={user} />, -10);
   });
 
   registerWidgetHosts(app, () => <ServerList />);

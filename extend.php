@@ -10,6 +10,7 @@ use ErnestDefoe\Garrison\Api\Controller\CommandStatusController;
 use ErnestDefoe\Garrison\Api\Controller\ConsoleController;
 use ErnestDefoe\Garrison\Api\Controller\IdentityController;
 use ErnestDefoe\Garrison\Api\Controller\ListServersController;
+use ErnestDefoe\Garrison\Api\Controller\PlaytimeController;
 use ErnestDefoe\Garrison\Api\Controller\QueueCommandController;
 use ErnestDefoe\Garrison\Api\Resource\ServerResource;
 use ErnestDefoe\Garrison\Console\BackupCommand;
@@ -140,6 +141,16 @@ $extenders = [
         ->post('/garrison/servers/{id}/identity', 'garrison.identity.claim', IdentityController::class)
         ->post('/garrison/servers/{id}/identity/confirm', 'garrison.identity.confirm', IdentityController::class)
         ->delete('/garrison/servers/{id}/identity', 'garrison.identity.unlink', IdentityController::class)
+
+        /*
+         * 🚨 Endpoints of their own rather than attributes on the user
+         * resource. Playtime hung off Flarum's user serializer would be a
+         * query per user in every payload, and a discussion page serializes
+         * dozens — the request-per-rendered-item shape that once exhausted a
+         * database connection cap and 500'd a whole forum.
+         */
+        ->get('/garrison/users/{id}/playtime', 'garrison.playtime.user', PlaytimeController::class)
+        ->get('/garrison/servers/{id}/leaderboard', 'garrison.playtime.server', PlaytimeController::class)
 
         /*
          * Admin. Every one of these resolves the same controller, which

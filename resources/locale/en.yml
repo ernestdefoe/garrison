@@ -175,12 +175,30 @@ ernestdefoe-garrison:
       title: "{count, plural, one {# player} other {# players}} in the game"
       nobody: Nobody is playing right now.
 
+    # 🚨 Built from translated units, not the English letters "h" and "m",
+    # because this string appears next to somebody's name on their own profile.
+    duration:
+      minutes: "{count, plural, one {# minute} other {# minutes}}"
+      hours: "{count, plural, one {# hour} other {# hours}}"
+      both: "{hours}h {minutes}m"
+
+    profile:
+      title: In the games
+
+    board:
+      title: Most time played
+      online: Playing right now
+
     # 🚨 Proved in the GAME, not asserted on the forum. A form that believes
     # whatever somebody types lets anybody claim the community's best-known
     # player and inherit their playtime and rank.
     link:
       title: Your in-game account
-      explain: Link your forum account to your character, so your playtime counts here. Join the server, type your in-game name below, and Garrison will send you a code in the game.
+      # 🚨 Says out loud that the link is PUBLIC. Somebody choosing to connect
+      # their forum account to a character deserves to know it will appear on
+      # their profile and on the server's leaderboard before they do it, not
+      # after.
+      explain: Link your forum account to your character, so your playtime counts here. Join the server, type your in-game name below, and Garrison will send you a code in the game. Your character will be shown on your profile.
       name_placeholder: Your name in the game
       send_code: Send me a code
       check_the_game: Garrison has sent a code to that player in the game. Read it there and type it below.

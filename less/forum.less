@@ -826,3 +826,73 @@
   margin: 0 0 8px;
   padding: 6px 10px;
 }
+
+/*
+ * Playtime on a profile, and the leaderboard on a server.
+ */
+.GarrisonProfile {
+  margin-top: 12px;
+}
+
+.GarrisonProfile-title,
+.GarrisonBoard h3 {
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  margin: 0 0 6px;
+  text-transform: uppercase;
+}
+
+.GarrisonProfile-list,
+.GarrisonBoard-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.GarrisonProfile-row,
+.GarrisonBoard-row {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 3px 0;
+}
+
+.GarrisonProfile-player,
+.GarrisonBoard-who {
+  font-weight: 600;
+  /* A display name can be anything the game allowed. It wraps rather than
+     pushing a profile card sideways. */
+  overflow-wrap: anywhere;
+}
+
+.GarrisonBoard-alias,
+.GarrisonProfile-server {
+  color: var(--muted-color);
+  font-size: 12px;
+}
+
+.GarrisonProfile-time,
+.GarrisonBoard-time {
+  color: var(--muted-color);
+  margin-inline-start: auto;
+  /* Digits line up down the column, so the list can be read as a ranking
+     rather than a set of unrelated numbers. */
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * 🚨 The one piece of information here that changes anything: a name somebody
+ * could go and join right now, rather than a name that was here on Tuesday.
+ */
+.GarrisonBoard-dot {
+  background: var(--success-color, #6bbf6b);
+  border-radius: 50%;
+  display: inline-block;
+  height: 8px;
+  width: 8px;
+}
+
+.GarrisonBoard {
+  margin-bottom: 16px;
+}

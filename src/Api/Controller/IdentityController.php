@@ -103,6 +103,15 @@ class IdentityController implements RequestHandlerInterface
             // Playtime comes with the identity because the two are always shown
             // together, and asking for it separately would be a second request
             // for one number.
+            /*
+             * 🚨 Closed sessions only here, deliberately.
+             *
+             * This row is returned the instant a claim is confirmed, and the
+             * live figure needs a second query to compute. The profile and the
+             * leaderboard — the places anybody actually reads playtime — both
+             * include the open session; a number shown once, immediately after
+             * linking, does not need to.
+             */
             'seconds' => $identity->isVerified()
                 ? (int) PlaySession::query()
                     ->where('server_id', $identity->server_id)

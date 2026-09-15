@@ -6,6 +6,7 @@ import humanTime from 'flarum/common/helpers/humanTime';
 
 import Backups from './Backups';
 import Console from './Console';
+import Leaderboard from './Leaderboard';
 import LinkIdentity from './LinkIdentity';
 import ServerControls from './ServerControls';
 import Settings from './Settings';
@@ -137,6 +138,14 @@ export default class ServerPage extends Page {
        * — neither of which most visitors can even see — would put the one
        * control aimed at them at the bottom of a page of controls that are not.
        */
+      /*
+       * 🚨 The leaderboard sits with the players, above the staff controls.
+       * It is the part of this page a community reads; the console and the
+       * backups are the part an operator works from, and most visitors cannot
+       * see them at all.
+       */
+      <Leaderboard server={s} key="board" />,
+
       <LinkIdentity server={s} key="link" />,
 
       s.canConsole ? <Console server={s} tall={true} key="console" /> : null,

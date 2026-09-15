@@ -1,3 +1,5 @@
+import app from 'flarum/forum/app';
+
 /**
  * 🚨 BINARY UNITS, because that is what every one of these sources reports.
  *
@@ -22,4 +24,35 @@ export function bytes(n) {
   }
 
   return (i === 0 ? n : n.toFixed(n >= 10 ? 0 : 1)) + ' ' + units[i];
+}
+
+/**
+ * A span of seconds, said the way a person would.
+ *
+ * 🚨 Rounded to the unit that matters and never more precise than that. "2h
+ * 14m" is a playtime; "2 hours, 14 minutes and 6 seconds" is a stopwatch
+ * reading, and nobody comparing themselves against a leaderboard cares about
+ * the seconds. Below an hour, minutes are the whole answer.
+ *
+ * 🚨 Built from translated units rather than hardcoded letters, because "h"
+ * and "m" are English abbreviations — they read as nothing in most languages,
+ * and this string appears next to somebody's name on their own profile.
+ */
+export function duration(seconds) {
+  const total = Math.max(0, Math.floor(seconds));
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+
+  if (hours === 0) {
+    return app.translator.trans('ernestdefoe-garrison.forum.duration.minutes', { count: minutes });
+  }
+
+  if (minutes === 0) {
+    return app.translator.trans('ernestdefoe-garrison.forum.duration.hours', { count: hours });
+  }
+
+  return app.translator.trans('ernestdefoe-garrison.forum.duration.both', {
+    hours,
+    minutes,
+  });
 }
