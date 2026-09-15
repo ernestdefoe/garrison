@@ -71,6 +71,7 @@ not merely by passing:
     internal/config      the agent's config — the only place a command is written
     internal/backup      archives: create, list, restore, prune, and safety copies
     internal/offsite     S3-compatible copies, signed by hand to keep deps at one
+    internal/settings    declared config files — read and rewrite in place
     internal/health      readiness probes — "running" and "joinable" are not the same
 
 ## Try it
@@ -122,6 +123,44 @@ cannot say what gets archived, where it is written, or where a copy is sent.
   }
 }
 ```
+
+### Editable settings
+
+🚨 **There is no file manager, and that absence is the feature.** The operator
+declares which files may be read and changed; the forum names one by its `id`
+and a path never crosses the wire. `keys`, when given, narrows it further — an
+operator can let a moderator change the message of the day without that
+moderator being three lines away from the RCON password in the same file.
+
+```json
+"config": [
+  {
+    "id": "props",
+    "label": "server.properties",
+    "path": "/srv/minecraft/server.properties",
+    "format": "properties",
+    "keys": ["motd", "max-players", "view-distance"]
+  },
+  {
+    "id": "startup",
+    "label": "Startup arguments",
+    "path": "/srv/minecraft/start.env",
+    "format": "properties",
+    "readOnly": true
+  }
+]
+```
+
+Formats are `properties` (`key=value`, `#` comments — Minecraft and most Java
+servers) and `ini` (the same with `[sections]`). Keys not in `keys` are still
+shown, greyed: a setting somebody cannot find is one they go and edit by hand.
+Comments in the file become the help text under each field, because the game
+already wrote down what its settings do.
+
+Editing rewrites one line in place. Comments, blank lines, ordering and
+indentation all survive, and the write goes through a temporary file and a
+rename so an interruption cannot leave a half-written config that resets the
+server to defaults on next start.
 
 ### Off-site copies
 
