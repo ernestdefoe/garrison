@@ -3,6 +3,7 @@ import Component from 'flarum/common/Component';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import humanTime from 'flarum/common/helpers/humanTime';
 
+import { serverMark } from '../marks';
 import { all, isLoaded, lastError, subscribe } from '../store';
 
 /**
@@ -77,6 +78,7 @@ export default class ServerList extends Component {
           className={`GarrisonServer-state GarrisonServer-state--${s.state}`}
           aria-hidden="true"
         />
+        {serverMark(s, 15)}
         <span className="GarrisonServer-name">{s.name}</span>
         <span className="GarrisonServer-players">{this.detail(s, stale)}</span>
       </li>

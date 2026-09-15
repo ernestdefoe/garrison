@@ -29,6 +29,11 @@ type Server struct {
 	Name   string `json:"name"`
 	Driver string `json:"driver"` // docker | systemd | process
 
+	// Game is the manifest key — "valheim", "minecraft". Optional, and the
+	// forum treats its absence as unknown rather than guessing from an image
+	// name: a guess that is wrong once is worse than an honest blank.
+	Game string `json:"game,omitempty"`
+
 	// docker
 	Container string `json:"container,omitempty"`
 

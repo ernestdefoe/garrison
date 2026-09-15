@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Garrison\Api\Controller;
 
+use ErnestDefoe\Garrison\Game\Marks;
 use ErnestDefoe\Garrison\Model\Server;
 use Flarum\Http\RequestUtil;
 use Laminas\Diactoros\Response\JsonResponse;
@@ -59,6 +60,16 @@ class ListServersController implements RequestHandlerInterface
                 'runningSince' => $server->running_since?->toIso8601String(),
                 'lastStatusAt' => $server->last_status_at?->toIso8601String(),
                 'agentLate' => $server->agent?->isLate() ?? true,
+
+                // 🚨 Resolved server-side, once. Every widget host and the
+                // status page then draw the same thing without each
+                // re-implementing the "custom, else mark, else monogram"
+                // ladder — which is how three surfaces end up disagreeing
+                // about what a server looks like.
+                'game' => $server->game,
+                'iconUrl' => $server->icon_url,
+                'mark' => Marks::forGame($server->game) ?? Marks::FALLBACK,
+                'monogram' => Marks::monogram($server->name),
             ];
 
             // 🚨 Stats only where the source says they are the kernel's own

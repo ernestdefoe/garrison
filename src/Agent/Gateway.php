@@ -177,6 +177,13 @@ class Gateway
         }
 
         $server->driver = (string) ($report['driver'] ?? $server->driver ?? 'unknown');
+
+        // The agent knows what game it is running because its own config says
+        // so. The forum never guesses from an image name — a guess that is
+        // wrong once is worse than an honest "unknown".
+        if (! empty($report['game'])) {
+            $server->game = (string) $report['game'];
+        }
         $server->state = (string) ($report['state'] ?? 'unknown');
         $server->state_detail = $report['detail'] ?? null;
         $server->pid = isset($report['pid']) ? (int) $report['pid'] : null;

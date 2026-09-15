@@ -194,3 +194,48 @@
   font-size: 12px;
   margin-right: 4px;
 }
+
+/* ---------- game marks ---------- */
+
+/*
+ * 🚨 The mark inherits the theme's text colour rather than carrying its own.
+ * These are neutral glyphs, not brand marks — a fixed colour would fight every
+ * theme, and there is no brand here to protect.
+ */
+.GarrisonMark {
+  color: var(--muted-color);
+  flex: none;
+}
+
+.GarrisonMark--custom {
+  // An operator's own image is whatever shape they uploaded; contain it rather
+  // than letting a wide logo stretch the row.
+  border-radius: 3px;
+  object-fit: contain;
+}
+
+.GarrisonMark--monogram {
+  align-items: center;
+  background: var(--control-bg);
+  border-radius: 3px;
+  color: var(--control-color);
+  display: inline-flex;
+  font-size: 10px;
+  font-weight: 700;
+  height: 16px;
+  justify-content: center;
+  letter-spacing: 0.02em;
+  width: 16px;
+}
+
+.GarrisonCard-mark {
+  align-items: center;
+  display: inline-flex;
+  flex: none;
+
+  .GarrisonMark--monogram {
+    font-size: 12px;
+    height: 22px;
+    width: 22px;
+  }
+}

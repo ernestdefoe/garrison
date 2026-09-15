@@ -327,8 +327,9 @@ func (a *Agent) StatusAll(ctx context.Context) []protocol.Status {
 		}
 
 		st, err := drv.Status(ctx, s)
+		st.Game = s.Game
 		if err != nil {
-			st = protocol.Status{Server: s.ID, Driver: s.Driver, State: protocol.StateUnknown}
+			st = protocol.Status{Server: s.ID, Driver: s.Driver, Game: s.Game, State: protocol.StateUnknown}
 			if pe, isProto := err.(*protocol.Error); isProto {
 				st.Detail = pe.Message
 			}

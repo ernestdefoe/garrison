@@ -197,6 +197,7 @@ const (
 type Status struct {
 	Server  string    `json:"server"`
 	Driver  string    `json:"driver"`
+	Game    string    `json:"game,omitempty"`
 	State   State     `json:"state"`
 	PID     int       `json:"pid,omitempty"`
 	Since   time.Time `json:"since,omitempty"`
