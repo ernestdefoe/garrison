@@ -302,3 +302,7 @@ func decode(raw json.RawMessage, into any) error {
 	}
 	return nil
 }
+
+// Drivers lists the drivers that worked on this host, for --check and for
+// agent.info.
+func (a *Agent) Drivers() []string { return a.drivers.Names() }
