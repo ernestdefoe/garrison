@@ -88,6 +88,7 @@ class AdminController implements RequestHandlerInterface
                 'joinPassword' => $s->join_password,
                 'joinCode' => $s->join_code,
                 'iconUrl' => $s->icon_url,
+                'backupEveryHours' => (int) $s->backup_every_hours,
                 'gameName' => Catalog::name($s->game),
                 'canFetchLogo' => Catalog::artworkCandidates($s->game) !== [],
             ])->values()->all(),
@@ -192,6 +193,13 @@ class AdminController implements RequestHandlerInterface
 
         if (array_key_exists('auto_remediate', $body)) {
             $server->auto_remediate = (bool) $body['auto_remediate'];
+        }
+
+        if (array_key_exists('backup_every_hours', $body)) {
+            // Clamped rather than trusted: a typo of 0.5 or 100000 should not
+            // become a backup every few seconds or one every eleven years.
+            $hours = (int) $body['backup_every_hours'];
+            $server->backup_every_hours = max(0, min(24 * 30, $hours));
         }
 
         if (array_key_exists('join_group_id', $body)) {

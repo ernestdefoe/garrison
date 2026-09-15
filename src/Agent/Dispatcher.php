@@ -39,6 +39,10 @@ class Dispatcher
         'server.stats',
         'console.tail',
         'console.send',
+        'backup.create',
+        'backup.list',
+        'backup.restore',
+        'backup.delete',
     ];
 
     /**
@@ -50,6 +54,22 @@ class Dispatcher
         'server.stop',
         'server.restart',
         'console.send',
+        'backup.create',
+    ];
+
+    /**
+     * Verbs that can destroy data, and need `garrison.manage`.
+     *
+     * 🚨 Separated from MUTATING deliberately. Restarting a server inconveniences
+     * people for a minute; restoring the wrong backup or deleting the right one
+     * loses work that cannot be recovered. Somebody trusted to keep a server
+     * running is not automatically somebody trusted to overwrite its world, and
+     * folding the two together is a decision an operator could never undo
+     * through configuration.
+     */
+    public const DESTRUCTIVE = [
+        'backup.restore',
+        'backup.delete',
     ];
 
     public function __construct(
@@ -95,13 +115,22 @@ class Dispatcher
      */
     protected function assertPermitted(User $actor, Server $server, string $verb): void
     {
-        $needed = in_array($verb, self::MUTATING, true)
-            ? 'garrison.control'
-            : 'garrison.view';
-
         if ($actor->hasPermission('garrison.manage')) {
             return;
         }
+
+        // 🚨 Destructive verbs have no permission below manage. There is
+        // deliberately no `garrison.restore` to grant: an operator who wants
+        // somebody restoring worlds is giving them the panel.
+        if (in_array($verb, self::DESTRUCTIVE, true)) {
+            throw new ValidationException([
+                'verb' => $this->translator->trans('ernestdefoe-garrison.api.errors.not_permitted'),
+            ]);
+        }
+
+        $needed = in_array($verb, self::MUTATING, true)
+            ? 'garrison.control'
+            : 'garrison.view';
 
         if (! $actor->hasPermission($needed)) {
             throw new ValidationException([

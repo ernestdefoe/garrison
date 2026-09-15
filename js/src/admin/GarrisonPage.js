@@ -180,6 +180,21 @@ export default class GarrisonPage extends ExtensionPage {
           {this.field(s, 'joinCode', 'field_join_code', 'join_code')}
         </div>
 
+        <div className="GarrisonAdmin-field">
+          <label for={`garrison-${s.id}-backup`}>{this.t('backup_every')}</label>
+          <input
+            id={`garrison-${s.id}-backup`}
+            className="FormControl"
+            type="number"
+            min="0"
+            max="720"
+            value={s.backupEveryHours ?? 0}
+            oninput={(e) => { s.backupEveryHours = e.target.value; }}
+            onblur={() => this.save(s, { backup_every_hours: s.backupEveryHours })}
+          />
+          <span className="GarrisonAdmin-meta">{this.t('backup_every_help')}</span>
+        </div>
+
         <div className="GarrisonAdmin-toggles">
           {Switch.component(
             {

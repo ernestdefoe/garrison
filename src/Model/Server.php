@@ -32,6 +32,7 @@ class Server extends AbstractModel
         'last_status_at' => 'datetime',
         'unready_since' => 'datetime',
         'last_remediation_at' => 'datetime',
+        'backup_queued_at' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];

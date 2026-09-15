@@ -9,6 +9,7 @@ use ErnestDefoe\Garrison\Api\Controller\AgentPollController;
 use ErnestDefoe\Garrison\Api\Controller\ConsoleController;
 use ErnestDefoe\Garrison\Api\Controller\ListServersController;
 use ErnestDefoe\Garrison\Api\Controller\QueueCommandController;
+use ErnestDefoe\Garrison\Console\BackupCommand;
 use ErnestDefoe\Garrison\Console\HealthCommand;
 use ErnestDefoe\Garrison\Console\PairCommand;
 use ErnestDefoe\Garrison\GarrisonServiceProvider;
@@ -43,6 +44,7 @@ $extenders = [
     (new Extend\Console())
         ->command(PairCommand::class)
         ->command(HealthCommand::class)
+        ->command(BackupCommand::class)
 
         /*
          * 🚨 Every minute, not every five. The whole argument for this feature
@@ -51,7 +53,15 @@ $extenders = [
          * consecutive unready readings before acting already waits three
          * minutes; a five-minute schedule would make that fifteen.
          */
-        ->schedule(HealthCommand::class, fn ($event) => $event->everyMinute()->withoutOverlapping()),
+        ->schedule(HealthCommand::class, fn ($event) => $event->everyMinute()->withoutOverlapping())
+
+        /*
+         * 🚨 Every fifteen minutes, not hourly, and the command itself decides
+         * what is actually due. A backup schedule of "every 6 hours" checked
+         * once an hour drifts by up to an hour each time; checked often and
+         * compared against when one was last QUEUED, it does not.
+         */
+        ->schedule(BackupCommand::class, fn ($event) => $event->everyFifteenMinutes()->withoutOverlapping()),
 
     /*
      * 🚨 The agent's route is exempt from CSRF, through core's own extender.

@@ -91,6 +91,8 @@ ernestdefoe-garrison:
     auto_remediate: Restart this server automatically when it stops accepting players
     attention: Garrison stopped trying to restart this server. It needs looking at.
     clear_attention: I have looked — resume automatic restarts
+    backup_every: Back up automatically, every (hours)
+    backup_every_help: Zero means no automatic backups. The agent keeps the most recent copies and never deletes a safety copy taken before a restore.
     icon: Server image
     icon_help: PNG, JPEG, GIF or WebP, up to 512 KB. Uploaded and kept here, so it cannot disappear later.
     fetch_logo: Fetch the real logo
