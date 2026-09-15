@@ -22,6 +22,12 @@ import (
 // is what gets parsed either way.
 type Config struct {
 	// ForumURL is the endpoint the agent dials OUT to.
+	//
+	// An https:// or http:// URL uses the polling transport, which is the one
+	// the product ships with and needs nothing on the forum host but Flarum.
+	// A ws:// or wss:// URL uses the websocket transport, which needs a
+	// gateway daemon there — the optional upgrade for sub-second streaming,
+	// never the only way in.
 	ForumURL string `json:"forumUrl"`
 	// Token authenticates this agent. Issued by the forum at pairing.
 	Token string `json:"token"`

@@ -306,3 +306,43 @@ func decode(raw json.RawMessage, into any) error {
 // Drivers lists the drivers that worked on this host, for --check and for
 // agent.info.
 func (a *Agent) Drivers() []string { return a.drivers.Names() }
+
+// StatusAll reports every server this agent knows about.
+//
+// 🚨 Gathered on every poll, not on request. The forum's status page then
+// renders from one cached row per server with no round trip to a host that
+// might be asleep — which is what lets ten widgets on a page cost one query
+// instead of ten requests.
+func (a *Agent) StatusAll(ctx context.Context) []protocol.Status {
+	out := make([]protocol.Status, 0, len(a.servers))
+
+	for _, s := range a.servers {
+		drv, ok := a.drivers[s.Driver]
+		if !ok {
+			out = append(out, protocol.Status{
+				Server: s.ID, Driver: s.Driver, State: protocol.StateUnknown,
+				Detail: "driver not available on this host",
+			})
+			continue
+		}
+
+		st, err := drv.Status(ctx, s)
+		if err != nil {
+			st = protocol.Status{Server: s.ID, Driver: s.Driver, State: protocol.StateUnknown}
+			if pe, isProto := err.(*protocol.Error); isProto {
+				st.Detail = pe.Message
+			}
+		}
+
+		// Stats ride along with status: a separate verb per server per poll
+		// would triple the traffic for a number the page always shows anyway.
+		if st.State == protocol.StateRunning {
+			if stats, serr := drv.Stats(ctx, s); serr == nil {
+				st.Stats = &stats
+			}
+		}
+
+		out = append(out, st)
+	}
+	return out
+}

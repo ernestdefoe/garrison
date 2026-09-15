@@ -14,21 +14,46 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
-        with: { go-version: '1.24', cache: true }
+        with: { go-version: '1.24', cache: true, cache-dependency-path: agent/go.sum }
 
       - name: Formatting
+        working-directory: agent
         run: |
           unformatted=$(gofmt -l .)
           if [ -n "$unformatted" ]; then echo "$unformatted"; exit 1; fi
 
       - run: go vet ./...
+        working-directory: agent
 
       # -race matters more here than in most projects: the agent runs a
       # goroutine per request plus a stream emitting console lines, all
       # writing to one websocket.
       - run: go test -race ./...
+        working-directory: agent
 
       # The agent ships as a static binary for Linux hosts; if cross-compiling
       # breaks, the product cannot be delivered even though tests pass.
       - name: Cross-compile the agent
+        working-directory: agent
         run: GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build ./cmd/garrison-agent
+
+  php:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with: { php-version: '8.3', coverage: none }
+
+      - run: composer validate --strict
+
+      - name: Lint every PHP file
+        run: find src migrations extend.php -name '*.php' -print0 | xargs -0 -n1 php -l
+
+      # 🚨 The prefix check is a CI gate, not a pre-release ritual.
+      #
+      # Raw SQL that names a table without the database prefix passes every
+      # local test — a dev install has no prefix — and 500s any customer who
+      # set one. One sweep across the other repos found it in 11 places. It is
+      # cheap to check on every push and expensive to find any other way.
+      - name: No raw SQL without the table prefix
+        run: python3 tools/check-table-prefix.py .

@@ -1,0 +1,25 @@
+ernestdefoe-garrison:
+
+  api:
+    errors:
+      unknown_verb: That is not something Garrison can ask a server to do.
+      not_permitted: You do not have permission to do that to this server.
+
+  forum:
+    # 🚨 Every user-facing string lives here. Zero hardcoded English anywhere
+    # in PHP or JS — a community running in German must get a German panel.
+    title: Game servers
+    state:
+      running: Running
+      stopped: Stopped
+      starting: Starting
+      stopping: Stopping
+      crashed: Crashed
+      unknown: Unknown
+    stale: "Last heard from {when}"
+    players: "{count, plural, one {# player} other {# players}} online"
+    no_servers: No game servers are set up yet.
+    join_hidden: Join details are not shown to your group.
+
+  admin:
+    title: Garrison

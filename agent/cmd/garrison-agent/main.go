@@ -11,6 +11,7 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/ernestdefoe/garrison/internal/agent"
@@ -71,10 +72,23 @@ func main() {
 	// an agent nobody will let auto-update.
 	defer processDriver.Shutdown()
 
-	link := agent.NewLink(cfg.ForumURL, cfg.Token, ag, log)
+	// The scheme picks the transport. Polling is the default because it needs
+	// nothing on the forum host but Flarum itself; websocket needs a gateway
+	// daemon there and exists as an upgrade, not a requirement.
+	var run func(context.Context) error
+
+	switch {
+	case strings.HasPrefix(cfg.ForumURL, "ws://"), strings.HasPrefix(cfg.ForumURL, "wss://"):
+		run = agent.NewLink(cfg.ForumURL, cfg.Token, ag, log).Run
+		log.Info("transport", "kind", "websocket")
+	default:
+		run = agent.NewHTTPLink(cfg.ForumURL, cfg.Token, ag, log).Run
+		log.Info("transport", "kind", "poll")
+	}
+
 	log.Info("starting", "version", agent.Version, "forum", cfg.ForumURL, "servers", len(cfg.Servers))
 
-	if err := link.Run(ctx); err != nil && ctx.Err() == nil {
+	if err := run(ctx); err != nil && ctx.Err() == nil {
 		log.Error("link", "err", err)
 		os.Exit(1)
 	}

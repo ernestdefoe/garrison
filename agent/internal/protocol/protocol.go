@@ -202,6 +202,10 @@ type Status struct {
 	Since   time.Time `json:"since,omitempty"`
 	Detail  string    `json:"detail,omitempty"`
 	Healthy *bool     `json:"healthy,omitempty"`
+
+	// Stats rides along with a status report rather than needing its own
+	// round trip, because the page that shows one always shows the other.
+	Stats *Stats `json:"stats,omitempty"`
 }
 
 // Stats is one resource sample.
