@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ernestdefoe/garrison/internal/backup"
 	"github.com/ernestdefoe/garrison/internal/driver"
 	"github.com/ernestdefoe/garrison/internal/health"
 	"github.com/ernestdefoe/garrison/internal/protocol"
@@ -188,6 +189,83 @@ func (a *Agent) dispatch(ctx context.Context, req protocol.Request, srv driver.S
 		}
 		return map[string]any{"sent": true}, nil
 
+	case protocol.VerbBackupCreate:
+		cfg, err := backupConfig(srv)
+		if err != nil {
+			return nil, err
+		}
+
+		b, err := backup.Create(ctx, cfg, srv.Name, false)
+		if err != nil {
+			return nil, protocol.Errf(protocol.CodeDriverFailed, "%v", err)
+		}
+
+		// Retention runs after a successful create, never before: pruning
+		// first would make room by deleting an old backup and then, if the new
+		// one failed, leave the operator with fewer than they started with.
+		removed, _ := backup.Prune(cfg)
+
+		return map[string]any{"backup": b, "pruned": removed}, nil
+
+	case protocol.VerbBackupList:
+		cfg, err := backupConfig(srv)
+		if err != nil {
+			return nil, err
+		}
+
+		list, lerr := backup.List(cfg)
+		if lerr != nil {
+			return nil, protocol.Errf(protocol.CodeDriverFailed, "%v", lerr)
+		}
+
+		return map[string]any{"backups": list}, nil
+
+	case protocol.VerbBackupRestore:
+		cfg, err := backupConfig(srv)
+		if err != nil {
+			return nil, err
+		}
+
+		var p protocol.BackupParams
+		if derr := decode(req.Params, &p); derr != nil {
+			return nil, derr
+		}
+
+		st, serr := drv.Status(ctx, srv)
+		if serr != nil {
+			return nil, protocol.Errf(protocol.CodeDriverFailed, "cannot determine whether the server is running: %v", serr)
+		}
+
+		/*
+		 * 🚨 The RUNNING state is read here, not taken from the request.
+		 * Letting the caller assert "it is stopped" would make the one check
+		 * standing between a live server and a corrupted world a claim by
+		 * whoever is asking.
+		 */
+		safety, rerr := backup.Restore(ctx, cfg, p.ID, st.State == protocol.StateRunning)
+		if rerr != nil {
+			return nil, protocol.Errf(protocol.CodeDriverFailed, "%v", rerr)
+		}
+
+		return map[string]any{"restored": p.ID, "safety": safety}, nil
+
+	case protocol.VerbBackupDelete:
+		cfg, err := backupConfig(srv)
+		if err != nil {
+			return nil, err
+		}
+
+		var p protocol.BackupParams
+		if derr := decode(req.Params, &p); derr != nil {
+			return nil, derr
+		}
+
+		if derr := backup.Delete(cfg, p.ID); derr != nil {
+			return nil, protocol.Errf(protocol.CodeDriverFailed, "%v", derr)
+		}
+
+		return map[string]any{"deleted": p.ID}, nil
+
 	case protocol.VerbConsoleTail:
 		var p protocol.TailParams
 		if err := decode(req.Params, &p); err != nil {
@@ -270,6 +348,26 @@ func (a *Agent) CancelAll() {
 		cancel()
 		delete(a.streams, id)
 	}
+}
+
+// backupConfig builds a backup config from what the OPERATOR configured.
+func backupConfig(srv driver.Server) (backup.Config, error) {
+	if srv.BackupRoot == "" || len(srv.BackupPaths) == 0 {
+		return backup.Config{}, protocol.Errf(protocol.CodeNotSupported,
+			"server %q has no backup paths configured on this host", srv.ID)
+	}
+
+	dir := srv.BackupDir
+	if dir == "" {
+		dir = srv.BackupRoot + "/garrison-backups"
+	}
+
+	return backup.Config{
+		Dir:   dir,
+		Root:  srv.BackupRoot,
+		Paths: srv.BackupPaths,
+		Keep:  srv.BackupKeep,
+	}, nil
 }
 
 func graceFrom(req protocol.Request, srv driver.Server) (time.Duration, error) {

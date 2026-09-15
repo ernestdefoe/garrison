@@ -41,6 +41,20 @@ const (
 	// Console.
 	VerbConsoleTail Verb = "console.tail"
 	VerbConsoleSend Verb = "console.send"
+
+	/*
+	 * Backups.
+	 *
+	 * 🚨 Adding verbs widens the security boundary, so these are shaped to
+	 * carry as little authority as possible. backup.restore takes an ID from
+	 * backup.list and nothing else — no path, no destination, no "and also
+	 * stop the server". Everything those would enable is either already a
+	 * verb of its own, or deliberately not available at all.
+	 */
+	VerbBackupCreate  Verb = "backup.create"
+	VerbBackupList    Verb = "backup.list"
+	VerbBackupRestore Verb = "backup.restore"
+	VerbBackupDelete  Verb = "backup.delete"
 )
 
 // known is the entire set of verbs this agent will ever dispatch.
@@ -49,16 +63,20 @@ const (
 // convention. It can be enumerated, which means it can be tested and it can be
 // shown to an operator; "everything starting with server." cannot be either.
 var known = map[Verb]struct{}{
-	VerbPing:        {},
-	VerbAgentInfo:   {},
-	VerbServerList:  {},
-	VerbStatus:      {},
-	VerbStart:       {},
-	VerbStop:        {},
-	VerbRestart:     {},
-	VerbStats:       {},
-	VerbConsoleTail: {},
-	VerbConsoleSend: {},
+	VerbPing:          {},
+	VerbAgentInfo:     {},
+	VerbServerList:    {},
+	VerbStatus:        {},
+	VerbStart:         {},
+	VerbStop:          {},
+	VerbRestart:       {},
+	VerbStats:         {},
+	VerbConsoleTail:   {},
+	VerbConsoleSend:   {},
+	VerbBackupCreate:  {},
+	VerbBackupList:    {},
+	VerbBackupRestore: {},
+	VerbBackupDelete:  {},
 }
 
 // Known reports whether v is a verb this agent implements. Everything else is
@@ -173,6 +191,14 @@ type TailParams struct {
 // SendParams is the payload of console.send.
 type SendParams struct {
 	Line string `json:"line"`
+}
+
+// BackupParams is the payload of backup.restore and backup.delete.
+//
+// 🚨 An ID, and only an ID. The agent validates it against the pattern IT
+// generates, so there is no shape of this field that names a path.
+type BackupParams struct {
+	ID string `json:"id"`
 }
 
 // ---- results -------------------------------------------------------------

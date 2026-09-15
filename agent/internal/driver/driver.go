@@ -66,6 +66,19 @@ type Server struct {
 	// StopCommand is a console line that asks the game to shut down cleanly
 	// (Minecraft's "stop", Factorio's "/quit"). Sent before any signal.
 	StopCommand string `json:"stopCommand,omitempty"`
+
+	/*
+	 * Backups.
+	 *
+	 * 🚨 Configured on the AGENT, like everything else that names a path. The
+	 * forum can ask for a backup of a server it knows about; it cannot say
+	 * WHAT gets archived or WHERE it is written, because those are the two
+	 * fields that would turn "make a backup" into arbitrary file access.
+	 */
+	BackupDir   string   `json:"backupDir,omitempty"`
+	BackupRoot  string   `json:"backupRoot,omitempty"`
+	BackupPaths []string `json:"backupPaths,omitempty"`
+	BackupKeep  int      `json:"backupKeep,omitempty"`
 }
 
 // DefaultStopGrace is used when a server does not set one. Valheim's own save
