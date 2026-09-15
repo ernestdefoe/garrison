@@ -21,9 +21,9 @@ type fakeDriver struct {
 	grace   time.Duration
 }
 
-func (f *fakeDriver) Name() string                          { return f.name }
-func (f *fakeDriver) Available(context.Context) error       { return nil }
-func (f *fakeDriver) note(s string)                         { f.calls = append(f.calls, s) }
+func (f *fakeDriver) Name() string                    { return f.name }
+func (f *fakeDriver) Available(context.Context) error { return nil }
+func (f *fakeDriver) note(s string)                   { f.calls = append(f.calls, s) }
 func (f *fakeDriver) Start(_ context.Context, _ driver.Server) error {
 	f.note("start")
 	f.running = true
@@ -95,9 +95,9 @@ func TestUnknownVerbsAreRefusedBeforeAnyDriverIsTouched(t *testing.T) {
 		"file.read",
 		"file.write",
 		"agent.update",
-		"docker.run",             // naming a driver does not get you one
-		"SERVER.START",           // the set is case-sensitive on purpose
-		"server.start ",          // trailing space is a different string
+		"docker.run",    // naming a driver does not get you one
+		"SERVER.START",  // the set is case-sensitive on purpose
+		"server.start ", // trailing space is a different string
 		"../server.start",
 		"",
 	}
