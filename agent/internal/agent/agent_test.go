@@ -798,3 +798,41 @@ func TestAServerThatCannotBePersistedIsNotServed(t *testing.T) {
 		t.Fatalf("the reason was not reported:\n%s", said)
 	}
 }
+
+/*
+🚨 The operator's own name for a server must reach the forum.
+
+Without it, `"name": "Shattered Pact"` in the config is a setting that does
+nothing: the panel shows the id, which reads as Garrison ignoring them. Found on
+the first production install, where a carefully named server appeared as
+"valheim".
+
+Every path that builds a Status is checked, including the ones for a driver that
+is missing or unwell — a server whose host is having a bad day is exactly when
+somebody is reading the panel.
+*/
+func TestTheOperatorsNameReachesTheForum(t *testing.T) {
+	a, err := New(context.Background(),
+		[]driver.Server{
+			{ID: "valheim", Name: "Shattered Pact", Driver: "fake"},
+			{ID: "orphan", Name: "No driver here", Driver: "missing"},
+		},
+		driver.Set{"fake": &fakeDriver{name: "fake", running: true}})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	names := map[string]string{}
+
+	for _, st := range a.StatusAll(context.Background()) {
+		names[st.Server] = st.Name
+	}
+
+	if names["valheim"] != "Shattered Pact" {
+		t.Errorf("a healthy server reported the name %q", names["valheim"])
+	}
+
+	if names["orphan"] != "No driver here" {
+		t.Errorf("a server with no driver reported the name %q", names["orphan"])
+	}
+}

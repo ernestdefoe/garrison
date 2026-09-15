@@ -874,7 +874,7 @@ func (a *Agent) StatusAll(ctx context.Context) []protocol.Status {
 		drv, ok := a.drivers[s.Driver]
 		if !ok {
 			out = append(out, protocol.Status{
-				Server: s.ID, Driver: s.Driver, State: protocol.StateUnknown,
+				Server: s.ID, Name: s.Name, Driver: s.Driver, State: protocol.StateUnknown,
 				Detail: "driver not available on this host",
 			})
 			continue
@@ -882,8 +882,9 @@ func (a *Agent) StatusAll(ctx context.Context) []protocol.Status {
 
 		st, err := drv.Status(ctx, s)
 		st.Game = s.Game
+		st.Name = s.Name
 		if err != nil {
-			st = protocol.Status{Server: s.ID, Driver: s.Driver, Game: s.Game, State: protocol.StateUnknown}
+			st = protocol.Status{Server: s.ID, Name: s.Name, Driver: s.Driver, Game: s.Game, State: protocol.StateUnknown}
 			if pe, isProto := err.(*protocol.Error); isProto {
 				st.Detail = pe.Message
 			}

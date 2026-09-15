@@ -309,6 +309,22 @@ const (
 // Status is what server.status returns.
 type Status struct {
 	Server string `json:"server"`
+
+	/*
+	 * Name is what the operator called this server in the agent's config.
+	 *
+	 * 🚨 Shipped because otherwise it is a setting that does nothing. An
+	 * operator writes `"name": "Shattered Pact"`, the forum never receives it,
+	 * and the panel shows the id — which reads as Garrison ignoring them.
+	 * Found on the first production install, where a server carefully named in
+	 * the config appeared as "valheim".
+	 *
+	 * The forum uses it ONLY when it first sees a server. After that an admin
+	 * owns the name, and an agent that re-asserted it every poll would undo a
+	 * rename fifteen seconds after somebody made it.
+	 */
+	Name string `json:"name,omitempty"`
+
 	Driver string `json:"driver"`
 	Game   string `json:"game,omitempty"`
 	State  State  `json:"state"`
