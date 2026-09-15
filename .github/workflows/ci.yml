@@ -1,0 +1,34 @@
+# The agent runs on other people's machines, so the things that must not break
+# are the boundary and the stop ladder. Both are tested, and both tests were
+# proved by reintroducing the bug they catch — see the README.
+name: CI
+on:
+  push: { branches: [main] }
+  pull_request:
+  workflow_dispatch:
+permissions: { contents: read }
+
+jobs:
+  go:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: { go-version: '1.24', cache: true }
+
+      - name: Formatting
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then echo "$unformatted"; exit 1; fi
+
+      - run: go vet ./...
+
+      # -race matters more here than in most projects: the agent runs a
+      # goroutine per request plus a stream emitting console lines, all
+      # writing to one websocket.
+      - run: go test -race ./...
+
+      # The agent ships as a static binary for Linux hosts; if cross-compiling
+      # breaks, the product cannot be delivered even though tests pass.
+      - name: Cross-compile the agent
+        run: GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build ./cmd/garrison-agent
