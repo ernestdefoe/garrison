@@ -2,6 +2,13 @@
 /dist/
 *.test
 .DS_Store
-garrison-agent
-garrison-hub
-garrisonctl
+
+# 🚨 Anchored with a leading slash, and that is not style.
+#
+# Unanchored, `garrison-agent` matches ANY path component with that name —
+# including the source directory cmd/garrison-agent/. Written without the
+# slash it silently excluded both command packages from the repo: everything
+# built and tested locally, and CI failed with "directory not found" because
+# main.go had never been committed at all.
+/garrison-agent
+/garrison-hub
