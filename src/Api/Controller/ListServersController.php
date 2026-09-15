@@ -26,10 +26,22 @@ class ListServersController implements RequestHandlerInterface
 
         $query = Server::query()->with('agent')->orderBy('name');
 
-        // Somebody who cannot administer Garrison sees public servers only.
-        // Not a filter applied in the view — a filter applied in the query, so
-        // a private server is never in the payload to be leaked by a template
-        // bug later.
+        /**
+         * 🚨 `is_public` on the server is the ONLY thing that decides whether
+         * a server can be seen to exist — by anybody, guests included. There
+         * is deliberately no second permission gating the list.
+         *
+         * Two switches for one outcome is how a control ends up doing nothing:
+         * an operator ticks "public" on a server, sees no change because a
+         * permission they never heard of is unset, and concludes the feature
+         * is broken. One switch, in the place they were already looking.
+         *
+         * `garrison.view` therefore means something narrower and honest: see
+         * the servers that are NOT public. Staff.
+         *
+         * Filtered in the QUERY, not in the view — a private server is then
+         * never in the payload at all, so no later template bug can leak one.
+         */
         if (! $actor->hasPermission('garrison.view')) {
             $query->where('is_public', true);
         }

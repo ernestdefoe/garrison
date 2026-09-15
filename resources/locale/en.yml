@@ -25,3 +25,12 @@ ernestdefoe-garrison:
 
   admin:
     title: Garrison
+
+    permissions:
+      # 🚨 Worded so the grid says what each one actually does. "View game
+      # servers" would be a lie: a public server is visible to everyone
+      # without any permission at all.
+      view: See servers that are not marked public
+      control: Start, stop and restart servers
+      console: Send commands to a game console
+      manage: Manage Garrison, pair hosts, see everything

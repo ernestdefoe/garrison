@@ -44,12 +44,26 @@ class Server extends AbstractModel
         }
 
         // No group set means staff only — the safe default. An operator who
-        // wants it public has to say so, rather than discovering they did.
+        // wants it wider has to say so, rather than discovering they did.
         if ($this->join_group_id === null) {
             return false;
         }
 
-        return $actor->groups->contains('id', $this->join_group_id);
+        /**
+         * 🚨 permissionGroupIds(), NOT $actor->groups.
+         *
+         * `groups` is the explicit pivot table only. Flarum's Members and
+         * Guests groups are IMPLICIT — every confirmed account is a Member
+         * without a row saying so — so a hand-rolled membership check silently
+         * fails for exactly the two groups an operator is most likely to pick.
+         *
+         * Caught on dev: join_group_id was set to Members and a member still
+         * saw nothing, with no error anywhere. That is the shape of a setting
+         * that looks wired and does nothing — the commonest bug in this whole
+         * codebase's family. permissionGroupIds() is core's own answer and
+         * includes the implicit groups plus anything a group processor adds.
+         */
+        return in_array((int) $this->join_group_id, $actor->permissionGroupIds(), true);
     }
 
     /**
