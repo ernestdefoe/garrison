@@ -28,6 +28,14 @@ ernestdefoe-garrison:
     action_failed: That did not work. Try again in a moment.
     confirm_stop: "Stop {name}? Anybody playing will be disconnected."
 
+    health:
+      unready: Players cannot join
+      unready_short: Cannot join
+      attention: Needs attention
+      attention_detail: Garrison restarted this server and it did not come back. Automatic restarts have stopped.
+      attention_short: Needs you
+      unchecked: Not checked — no readiness probes are set up for this game.
+
     action:
       start: Start
       stop: Stop

@@ -195,14 +195,21 @@ const (
 
 // Status is what server.status returns.
 type Status struct {
-	Server  string    `json:"server"`
-	Driver  string    `json:"driver"`
-	Game    string    `json:"game,omitempty"`
-	State   State     `json:"state"`
-	PID     int       `json:"pid,omitempty"`
-	Since   time.Time `json:"since,omitempty"`
-	Detail  string    `json:"detail,omitempty"`
-	Healthy *bool     `json:"healthy,omitempty"`
+	Server string `json:"server"`
+	Driver string `json:"driver"`
+	Game   string `json:"game,omitempty"`
+	State  State  `json:"state"`
+	PID    int    `json:"pid,omitempty"`
+
+	// 🚨 A POINTER, so a server that has never started sends nothing.
+	//
+	// `omitempty` does not work on a time.Time: it is a struct, so the zero
+	// value is still marshalled — as "0001-01-01T00:00:00Z". PHP parsed that
+	// happily and the status page showed "Started Dec 31, 0000" for a process
+	// that had never run. omitempty on a pointer does what it looks like.
+	Since   *time.Time `json:"since,omitempty"`
+	Detail  string     `json:"detail,omitempty"`
+	Healthy *bool      `json:"healthy,omitempty"`
 
 	// Stats rides along with a status report rather than needing its own
 	// round trip, because the page that shows one always shows the other.

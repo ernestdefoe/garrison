@@ -105,6 +105,8 @@ export default class ServersPage extends Page {
           </p>
         ) : null}
 
+        {this.health(s, running)}
+
         {/*
           🚨 CPU and memory ONLY while running. They are the last sample taken,
           and for a stopped server that is a memory of when it was up — a
@@ -134,6 +136,77 @@ export default class ServersPage extends Page {
           </div>
         ) : null}
       </li>
+    );
+  }
+
+  /**
+   * 🚨 The banner this whole product exists for.
+   *
+   * A server that is RUNNING and UNREADY is the failure that went unnoticed
+   * for twenty hours, because every dashboard in the world showed it green.
+   * So it is not a subtle tint on a row: it says, in words, that players
+   * cannot get in — above the facts, not beside them.
+   *
+   * And "unknown" is rendered as its own thing, never as healthy. A server
+   * with no probes has not been checked, and a green light that means "nobody
+   * looked" is worse than no light at all.
+   */
+  health(s, running) {
+    if (s.needsAttention) {
+      return (
+        <div className="GarrisonHealth GarrisonHealth--attention">
+          <strong>{app.translator.trans('ernestdefoe-garrison.forum.health.attention')}</strong>
+          <span>{app.translator.trans('ernestdefoe-garrison.forum.health.attention_detail')}</span>
+          {this.checks(s)}
+        </div>
+      );
+    }
+
+    if (running && s.health === 'unready') {
+      const checks = s.healthChecks || [];
+
+      /*
+       * The summary IS the first failing check's name — it is chosen that way
+       * on the agent, so that somebody who can only see the state still gets
+       * the finding. Printing both puts the same sentence on screen twice,
+       * which reads as a bug in the panel rather than a fault on the server.
+       * Staff see the detailed list; everyone else sees the one line.
+       */
+      const summaryIsDuplicated = checks.some((c) => c.name === s.healthSummary);
+
+      return (
+        <div className="GarrisonHealth GarrisonHealth--unready">
+          <strong>{app.translator.trans('ernestdefoe-garrison.forum.health.unready')}</strong>
+          {s.healthSummary && !summaryIsDuplicated ? <span>{s.healthSummary}</span> : null}
+          {this.checks(s)}
+        </div>
+      );
+    }
+
+    if (running && (s.health === 'unknown' || !s.health)) {
+      return (
+        <p className="GarrisonHealth GarrisonHealth--unknown">
+          {app.translator.trans('ernestdefoe-garrison.forum.health.unchecked')}
+        </p>
+      );
+    }
+
+    return null;
+  }
+
+  /** Failing probes, staff only — the API omits them for everybody else. */
+  checks(s) {
+    if (!s.healthChecks || !s.healthChecks.length) return null;
+
+    return (
+      <ul className="GarrisonHealth-checks">
+        {s.healthChecks.map((c, i) => (
+          <li key={i}>
+            <span className="GarrisonHealth-checkName">{c.name}</span>
+            {c.detail ? <span className="GarrisonHealth-checkDetail">{c.detail}</span> : null}
+          </li>
+        ))}
+      </ul>
     );
   }
 

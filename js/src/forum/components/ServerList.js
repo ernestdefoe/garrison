@@ -92,6 +92,16 @@ export default class ServerList extends Component {
       });
     }
 
+    // 🚨 In a widget there is room for one word, so it goes to the worst true
+    // thing. "3/10" beside a server nobody can join is a lie of omission.
+    if (s.needsAttention) {
+      return app.translator.trans('ernestdefoe-garrison.forum.health.attention_short');
+    }
+
+    if (s.state === 'running' && s.health === 'unready') {
+      return app.translator.trans('ernestdefoe-garrison.forum.health.unready_short');
+    }
+
     if (s.state === 'running' && s.playersOnline !== null && s.playersOnline !== undefined) {
       if (s.playersMax) return `${s.playersOnline}/${s.playersMax}`;
 

@@ -239,3 +239,71 @@
     width: 22px;
   }
 }
+
+/* ---------- health ---------- */
+
+/*
+ * 🚨 Loud on purpose. "Running" and "running but unjoinable" looking similar
+ * is the exact failure this product exists to prevent — a twenty-hour outage
+ * that every dashboard showed as green.
+ */
+.GarrisonHealth {
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  font-size: 13px;
+  gap: 4px;
+  padding: 10px 12px;
+
+  strong {
+    font-size: 14px;
+  }
+}
+
+.GarrisonHealth--unready {
+  background: var(--alert-error-bg, #b23b32);
+  color: var(--alert-error-color, #fff);
+}
+
+.GarrisonHealth--attention {
+  background: var(--alert-warning-bg, #a9750d);
+  color: var(--alert-warning-color, #fff);
+}
+
+/*
+ * Unchecked is quiet, and deliberately NOT green. It is a statement that
+ * nobody looked, which must not be mistaken for a clean bill of health.
+ */
+.GarrisonHealth--unknown {
+  color: var(--muted-color);
+  font-size: 13px;
+  font-style: italic;
+  margin: 0;
+  padding: 0;
+}
+
+.GarrisonHealth-checks {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  font-size: 12px;
+
+  li {
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+.GarrisonHealth-checkName {
+  font-weight: 600;
+}
+
+.GarrisonHealth-checkDetail {
+  opacity: 0.85;
+  // Probe detail is machine output — ports, byte counts, log fragments.
+  font-family: var(--code-font, monospace);
+  font-size: 11px;
+}

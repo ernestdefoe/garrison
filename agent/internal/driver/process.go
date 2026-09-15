@@ -63,7 +63,9 @@ func (p *Process) Status(ctx context.Context, s Server) (protocol.Status, error)
 
 	snap := pr.Snapshot()
 	st.PID = snap.PID
-	st.Since = snap.Started
+	if !snap.Started.IsZero() {
+		st.Since = &snap.Started
+	}
 	switch {
 	case snap.Running:
 		st.State = protocol.StateRunning

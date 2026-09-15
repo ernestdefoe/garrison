@@ -86,8 +86,10 @@ func (d *Docker) Status(ctx context.Context, s Server) (protocol.Status, error) 
 	}
 
 	st.PID = in.State.Pid
-	if t, err := time.Parse(time.RFC3339Nano, in.State.StartedAt); err == nil {
-		st.Since = t
+	// Docker reports "0001-01-01T00:00:00Z" for a container that has never
+	// been started — parseable, and meaningless.
+	if t, err := time.Parse(time.RFC3339Nano, in.State.StartedAt); err == nil && !t.IsZero() {
+		st.Since = &t
 	}
 
 	// 🚨 Normalise. Docker's vocabulary is its own — "exited", "created",

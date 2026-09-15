@@ -82,6 +82,44 @@ class Server extends AbstractModel
     }
 
     /**
+     * The probes that are currently failing, newest report.
+     *
+     * Only the failures: a list of thirty passing checks buries the one that
+     * matters, and an operator reading this at 3am needs the finding, not an
+     * audit of everything that is fine.
+     *
+     * @return array<int, array{name: string, detail: string}>
+     */
+    public function failingChecks(): array
+    {
+        if (empty($this->health_checks)) {
+            return [];
+        }
+
+        $decoded = json_decode($this->health_checks, true);
+
+        if (! is_array($decoded)) {
+            return [];
+        }
+
+        $failing = [];
+
+        foreach ($decoded as $check) {
+            if (! is_array($check) || ! empty($check['ok']) || ! empty($check['skipped'])) {
+                continue;
+            }
+
+            $failing[] = [
+                'name' => (string) ($check['name'] ?? 'check'),
+                'detail' => (string) ($check['detail'] ?? ''),
+                'warn' => ! empty($check['warn']),
+            ];
+        }
+
+        return $failing;
+    }
+
+    /**
      * Stale means the agent has not reported recently, so what is on screen is
      * a memory rather than a fact. Shown as such: a panel confidently
      * displaying a twenty-minute-old "running" is how an outage goes unnoticed

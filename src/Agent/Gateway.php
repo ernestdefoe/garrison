@@ -188,8 +188,27 @@ class Gateway
         $server->state_detail = $report['detail'] ?? null;
         $server->pid = isset($report['pid']) ? (int) $report['pid'] : null;
 
+        /**
+         * 🚨 Guarded at the boundary as well as at the source. Go's zero time
+         * marshals as "0001-01-01T00:00:00Z", which is non-empty and parses
+         * cleanly — the status page cheerfully showed "Started Dec 31, 0000".
+         * The agent no longer sends it, and this refuses it anyway: data from
+         * a remote process is checked here, not trusted to have been checked
+         * over there.
+         */
+        $server->running_since = null;
+
         if (! empty($report['since'])) {
-            $server->running_since = Carbon::parse($report['since']);
+            try {
+                $since = Carbon::parse($report['since']);
+
+                if ($since->year > 2000) {
+                    $server->running_since = $since;
+                }
+            } catch (\Throwable) {
+                // An unparseable timestamp is not worth failing a whole status
+                // report over; the rest of it is still useful.
+            }
         }
 
         if (isset($report['stats']) && is_array($report['stats'])) {

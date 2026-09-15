@@ -66,6 +66,18 @@ class ListServersController implements RequestHandlerInterface
                 // re-implementing the "custom, else mark, else monogram"
                 // ladder — which is how three surfaces end up disagreeing
                 // about what a server looks like.
+                /**
+                 * 🚨 Health is a SEPARATE field from state, and that is the
+                 * product's whole thesis in one line of JSON. "running" and
+                 * "players can actually get in" are different facts; conflating
+                 * them is what let a server sit unjoinable for twenty hours
+                 * while every dashboard showed green.
+                 */
+                'health' => $server->health_state,
+                'healthSummary' => $server->health_summary,
+                'needsAttention' => (bool) $server->needs_attention,
+                'autoRemediate' => (bool) $server->auto_remediate,
+
                 'game' => $server->game,
                 'iconUrl' => $server->icon_url,
                 'mark' => Marks::forGame($server->game) ?? Marks::FALLBACK,
@@ -83,6 +95,16 @@ class ListServersController implements RequestHandlerInterface
                 $row['memoryLimit'] = $server->memory_limit;
                 $row['statsSource'] = $server->stats_source;
                 $row['statsApproximate'] = $server->stats_source === 'ps';
+            }
+
+            /**
+             * 🚨 Probe DETAIL is staff-only. A failing check says things like
+             * "UDP 2457 has 9600 bytes queued" — port numbers, log patterns,
+             * internal addresses. Useful to an operator, and reconnaissance to
+             * anybody else. The health STATE is public; the reasons are not.
+             */
+            if ($actor->hasPermission('garrison.view') || $actor->hasPermission('garrison.manage')) {
+                $row['healthChecks'] = $server->failingChecks();
             }
 
             if ($server->joinDetailsVisibleTo($actor)) {
