@@ -363,3 +363,38 @@
   font-size: 11px;
   padding: 1px 8px;
 }
+
+/*
+ * Installing a new server.
+ */
+.GarrisonProvision {
+  margin-top: 8px;
+}
+
+.GarrisonProvision-form {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+
+  .FormControl {
+    flex: 1 1 160px;
+    min-width: 0;
+    width: auto;
+  }
+}
+
+.GarrisonAdmin-error {
+  border-inline-start: 3px solid var(--error-color, #d14848);
+  margin: 8px 0;
+  padding: 6px 10px;
+}
+
+/* The host row wraps so the install form can take a line of its own. */
+.GarrisonAdmin-host {
+  flex-wrap: wrap;
+}
+
+.GarrisonProvision {
+  flex-basis: 100%;
+}

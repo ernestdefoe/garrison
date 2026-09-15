@@ -16,6 +16,7 @@ import (
 	"github.com/ernestdefoe/garrison/internal/offsite"
 	"github.com/ernestdefoe/garrison/internal/players"
 	"github.com/ernestdefoe/garrison/internal/protocol"
+	"github.com/ernestdefoe/garrison/internal/provision"
 	"github.com/ernestdefoe/garrison/internal/settings"
 )
 
@@ -39,6 +40,24 @@ type Agent struct {
 	// Who is in each game, read from its log. Nil for a server whose operator
 	// did not configure how to read them.
 	watchers map[string]*players.Watcher
+
+	/*
+	 * What may be installed, and how to persist a server once it is.
+	 *
+	 * 🚨 `register` is nil unless the agent was built from a config file. A
+	 * provisioned server that cannot be written down is one that vanishes on
+	 * the next restart, so the agent says so rather than pretending.
+	 */
+	templates []provision.Template
+	register  func(driver.Server) error
+
+	// Installs in flight, so a second click cannot start a second steamcmd
+	// writing the same directory.
+	installing map[string]struct{}
+
+	// The agent's own lifetime, for work that outlives the request that began
+	// it. See runInstall.
+	ctx context.Context
 
 	/*
 	 * Which DRIVERS this host cannot run, kept so `--check` can report them.
@@ -80,6 +99,8 @@ func New(ctx context.Context, servers []driver.Server, candidates driver.Set) (*
 		streams:     make(map[string]context.CancelFunc),
 		offsiteLast: make(map[string]offsiteOutcome),
 		watchers:    make(map[string]*players.Watcher),
+		installing:  make(map[string]struct{}),
+		ctx:         ctx,
 	}
 
 	var unavailable []string
@@ -126,6 +147,14 @@ func New(ctx context.Context, servers []driver.Server, candidates driver.Set) (*
 	a.unavailable = unavailable
 
 	return a, unavailable
+}
+
+// Provisioning tells the agent what may be installed and how to persist the
+// result. Called by the command once its config is loaded; an agent without it
+// simply reports no templates.
+func (a *Agent) Provisioning(templates []provision.Template, register func(driver.Server) error) {
+	a.templates = templates
+	a.register = register
 }
 
 // Emit is how a long-running verb pushes events back to the forum.
@@ -301,6 +330,17 @@ func (a *Agent) dispatch(ctx context.Context, req protocol.Request, srv driver.S
 		}
 
 		return result, nil
+
+	case protocol.VerbProvisionTemplates:
+		return map[string]any{"templates": provision.List(a.templates)}, nil
+
+	case protocol.VerbProvisionInstall:
+		var p protocol.ProvisionParams
+		if derr := decode(req.Params, &p); derr != nil {
+			return nil, derr
+		}
+
+		return a.provision(ctx, p, emit)
 
 	case protocol.VerbPlayerVerify:
 		var p protocol.VerifyParams
@@ -534,6 +574,144 @@ func (a *Agent) CancelAll() {
 		cancel()
 		delete(a.streams, id)
 	}
+}
+
+/*
+provision installs a new server and adds it to this agent.
+
+🚨 It returns as soon as the install STARTS, and reports progress as events.
+
+A Steam download can be twenty gigabytes. Holding the command open until it
+finishes would block the poll it arrived on, time out, be retried, and start a
+second download of the same game into the same directory — so the obvious
+synchronous implementation is not merely slow, it corrupts the thing it is
+installing. The forum learns it began; the console panel shows steamcmd's own
+output as it goes; the server appears when it is ready.
+*/
+func (a *Agent) provision(ctx context.Context, p protocol.ProvisionParams, emit Emit) (any, error) {
+	tpl, err := provision.Find(a.templates, p.Template)
+	if err != nil {
+		return nil, protocol.Errf(protocol.CodeBadRequest, "%v", err)
+	}
+
+	server, err := tpl.Server(p.ID, p.Name)
+	if err != nil {
+		return nil, protocol.Errf(protocol.CodeBadRequest, "%v", err)
+	}
+
+	a.mu.Lock()
+	_, clash := a.servers[server.ID]
+	_, installing := a.installing[server.ID]
+	a.mu.Unlock()
+
+	if clash {
+		return nil, protocol.Errf(protocol.CodeBadRequest, "a server called %q already exists on this host", server.ID)
+	}
+
+	/*
+	 * 🚨 One install per id at a time.
+	 *
+	 * Two steamcmd runs writing the same directory produce a corrupt game that
+	 * starts and then misbehaves in ways nobody traces back to here. A second
+	 * click, an impatient retry or a duplicated command all land here, and
+	 * refusing is both correct and the only thing that can be explained.
+	 */
+	if installing {
+		return nil, protocol.Errf(protocol.CodeBadRequest, "%q is already being installed", server.ID)
+	}
+
+	a.mu.Lock()
+	a.installing[server.ID] = struct{}{}
+	a.mu.Unlock()
+
+	go a.runInstall(server, tpl, emit)
+
+	return map[string]any{"started": true, "server": server.ID}, nil
+}
+
+// runInstall does the download and registers the server, reporting as it goes.
+func (a *Agent) runInstall(server driver.Server, tpl provision.Template, emit Emit) {
+	defer func() {
+		a.mu.Lock()
+		delete(a.installing, server.ID)
+		a.mu.Unlock()
+	}()
+
+	say := func(format string, args ...any) {
+		line := fmt.Sprintf(format, args...)
+
+		/*
+		 * 🚨 Emitted as console output for the server BEING CREATED, so it
+		 * lands in the panel somebody is already watching. A separate
+		 * progress channel would be a second thing to build, a second thing to
+		 * poll and a second place to look — and the console is where a person
+		 * installing a game server expects installer output to be.
+		 */
+		emit(protocol.Event{
+			Kind: "console",
+			At:   time.Now(),
+			Data: mustJSON(protocol.Line{Server: server.ID, At: time.Now(), Text: line}),
+		})
+	}
+
+	say("installing %s as %s", tpl.ID, server.ID)
+
+	/*
+	 * 🚨 A context of the AGENT's, not the request's.
+	 *
+	 * The request that started this is answered already, and its context is
+	 * cancelled the moment that poll completes — inheriting it would kill
+	 * steamcmd within seconds, leaving a half-downloaded game and an operator
+	 * with no idea why. Bounded rather than unbounded so a wedged installer
+	 * cannot hold a slot for ever.
+	 */
+	ctx, cancel := context.WithTimeout(a.ctx, 6*time.Hour)
+	defer cancel()
+
+	if err := tpl.Install(ctx, server.ID, func(line string) { say("%s", line) }); err != nil {
+		say("install failed: %v", err)
+
+		return
+	}
+
+	if a.register == nil {
+		say("installed, but this agent cannot persist new servers")
+
+		return
+	}
+
+	/*
+	 * 🚨 Persisted BEFORE it is served.
+	 *
+	 * A server added to memory and not to the file works perfectly until the
+	 * next agent restart, when it silently disappears — along with any backups
+	 * that were scheduled for it. Writing first means the two can only
+	 * disagree in the safe direction.
+	 */
+	if err := a.register(server); err != nil {
+		say("installed, but the server could not be saved: %v", err)
+
+		return
+	}
+
+	a.mu.Lock()
+	a.servers[server.ID] = server
+	a.mu.Unlock()
+
+	if w, werr := players.New(server.Players); werr == nil && w != nil {
+		a.watchers[server.ID] = w
+	}
+
+	say("%s is installed and ready to start", server.ID)
+}
+
+func mustJSON(v any) json.RawMessage {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return json.RawMessage(`{}`)
+	}
+
+	return b
 }
 
 // offsiteStatus reports what this agent knows about remote copies for a server.

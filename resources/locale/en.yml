@@ -331,6 +331,23 @@ ernestdefoe-garrison:
     # 🚨 A member can unlink their own character. This is for the case an
     # operator actually gets asked about: somebody who linked a character, left
     # the community, and whose in-game name the next player now has.
+    # 🚨 The forum picks a template and names the server. The install
+    # directory, start command, driver and Steam app id all come from the
+    # agent's own config file on the game host — there is deliberately no field
+    # here for a path or a command.
+    provision:
+      load: Install a new server
+      none: This host has no install templates. They are declared in the agent's config file.
+      choose: Choose what to install
+      from_steam: downloads from Steam
+      id_placeholder: A short id, like valheim-2
+      name_placeholder: What to call it
+      install: Install
+      started: "Installing {id}. It appears here when it is ready; the download can take a while, and the progress is in that server's console."
+      failed: The install could not be started.
+      no_answer: The host has not answered yet. It may still be working.
+      needs_a_server: This host has no servers yet, so there is nothing to send the request through. Add the first one to the agent's config by hand.
+
     identities: Linked accounts
     no_identities: Nobody has linked a forum account to an in-game character yet.
     identity_pending: Waiting for their code

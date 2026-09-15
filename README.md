@@ -73,6 +73,7 @@ not merely by passing:
     internal/offsite     S3-compatible copies, signed by hand to keep deps at one
     internal/settings    declared config files — read and rewrite in place
     internal/players     who is in the game, from its log — and in-game proof of identity
+    internal/provision   install templates — the only way the agent gains a server
     internal/health      readiness probes — "running" and "joinable" are not the same
 
 ## Try it
@@ -280,6 +281,50 @@ agent renders the operator's template and refuses any player it cannot currently
 see in the game. That matters because verification is something ordinary members
 do — and a game console is where `ban`, `op` and `give` live. A player called
 `alice /op mallory` would otherwise turn one command into two.
+
+## Installing a server from the forum
+
+🚨 **The forum sends a template name and a server id. That is all it sends.**
+
+This is the one feature where the agent gains a server it did not have at
+startup, which means it writes its own config — exactly the surface where "the
+operator decides what may run" could quietly become "the forum decides what may
+run". It does not: the install directory, the start command, the driver and the
+Steam app id all come from a template in this file. A fully compromised forum
+can install one of the games its operator already listed, into the directory its
+operator already chose, and nothing else anywhere else.
+
+```json
+"templates": [
+  {
+    "id": "valheim",
+    "label": "Valheim dedicated server",
+    "driver": "process",
+    "game": "valheim",
+    "steamApp": 896660,
+    "installRoot": "/srv/garrison",
+    "command": "./start_server.sh",
+    "stopGraceSeconds": 120,
+    "backupPaths": ["worlds"],
+    "backupKeep": 14,
+    "players": { "preset": "valheim" }
+  }
+]
+```
+
+An agent with no `templates` cannot be asked to install anything, and that is
+the default. The id a new server is given must match `[a-z0-9][a-z0-9_-]{0,31}`
+— it cannot express `..`, a slash or a leading dash, so there is no clever
+composition to reason about. Everything else a provisioned server inherits
+(backup paths, player tracking, editable config files) comes from the template,
+so an operator sets it once per game rather than once per server.
+
+`steamApp` needs `steamcmd` on the host. A template without one installs nothing
+and simply prepares the directory, for games that are not on Steam.
+
+The picker in the admin panel shows the label and the game and **never the
+install path or the command** — knowing where a game lives on disk is the first
+half of doing something about it.
 
 ## Widget hosts
 

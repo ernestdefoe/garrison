@@ -29,7 +29,7 @@ func findings(t *testing.T, servers []driver.Server, available ...string) []Find
 	ctx, cancel := context.WithTimeout(context.Background(), 1500*time.Millisecond)
 	t.Cleanup(cancel)
 
-	return Check(ctx, servers, available, nil)
+	return Check(ctx, "", servers, available, nil)
 }
 
 func bad(fs []Finding) []string {
@@ -274,5 +274,46 @@ func TestOptionalFeaturesAreNotNagged(t *testing.T) {
 
 	if problems := bad(got); len(problems) != 0 {
 		t.Fatalf("a minimal server reported problems: %v", problems)
+	}
+}
+
+/*
+🚨 THAT FILE HOLDS THE AGENT'S TOKEN.
+
+The token is the whole of this agent's authority — anything that can read it can
+impersonate the host to the forum — and the operator's off-site bucket keys are
+usually in the same file. A world-readable config is not something anybody
+notices: it is the default umask on most distributions, and a working agent
+looks identical either way. Found on the dev host at 0644.
+*/
+func TestAWorldReadableConfigIsAProblem(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "agent.json")
+
+	if err := os.WriteFile(path, []byte("{}"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	got := Check(context.Background(), path, nil, []string{"process"}, nil)
+
+	if len(bad(got)) == 0 {
+		t.Fatalf("a 0644 config passed: %+v", got)
+	}
+
+	if !mentions(got, "token") {
+		t.Fatalf("the reason was not given: %+v", got)
+	}
+}
+
+func TestATightConfigIsFine(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "agent.json")
+
+	if err := os.WriteFile(path, []byte("{}"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	got := Check(context.Background(), path, nil, []string{"process"}, nil)
+
+	if problems := bad(got); len(problems) != 0 {
+		t.Fatalf("a 0600 config reported problems: %v", problems)
 	}
 }

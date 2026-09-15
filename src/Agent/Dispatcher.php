@@ -47,6 +47,8 @@ class Dispatcher
         'config.get',
         'config.set',
         'player.verify',
+        'provision.templates',
+        'provision.install',
     ];
 
     /**
@@ -60,6 +62,7 @@ class Dispatcher
         'console.send',
         'backup.create',
         'config.set',
+        'provision.install',
     ];
 
     /**
@@ -150,6 +153,28 @@ class Dispatcher
 
         if ($actor->hasPermission('garrison.manage')) {
             return;
+        }
+
+        /*
+         * 🚨 Reaching here means the actor does NOT have `garrison.manage`,
+         * and provisioning needs exactly that and nothing less.
+         *
+         * Installing a server writes to the host's disk, downloads gigabytes
+         * over its connection, and adds a server the operator did not
+         * personally create. Every one of those is something a person trusted
+         * to restart a server is not automatically trusted to do — and unlike
+         * a restart, none of them is undone by pressing the other button.
+         *
+         * 🚨 Placed AFTER the manage check on purpose. The first version of
+         * this sat above it and refused everybody including administrators,
+         * because every branch in this method runs on the path where manage is
+         * absent. An ordering mistake in a permission check reads as a broken
+         * feature rather than as a security bug, which is how it survives.
+         */
+        if (str_starts_with($verb, 'provision.')) {
+            throw new ValidationException([
+                'verb' => $this->translator->trans('ernestdefoe-garrison.api.errors.not_permitted'),
+            ]);
         }
 
         // 🚨 Destructive verbs have no permission below manage. There is

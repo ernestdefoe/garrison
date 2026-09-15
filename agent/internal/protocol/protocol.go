@@ -81,6 +81,19 @@ const (
 	 * members do.
 	 */
 	VerbPlayerVerify Verb = "player.verify"
+
+	/*
+	 * Provisioning.
+	 *
+	 * 🚨 The forum sends a TEMPLATE NAME and a SERVER ID, and nothing else.
+	 * The install directory, the start command, the driver and the Steam app
+	 * id all come from a template in the agent's own config file. There is no
+	 * field in ProvisionParams that can name a path, a command or an app —
+	 * which matters more here than anywhere else in this protocol, because
+	 * this is the one verb that makes the agent write its own allowlist.
+	 */
+	VerbProvisionTemplates Verb = "provision.templates"
+	VerbProvisionInstall   Verb = "provision.install"
 )
 
 // known is the entire set of verbs this agent will ever dispatch.
@@ -107,6 +120,9 @@ var known = map[Verb]struct{}{
 	VerbConfigGet:     {},
 	VerbConfigSet:     {},
 	VerbPlayerVerify:  {},
+
+	VerbProvisionTemplates: {},
+	VerbProvisionInstall:   {},
 }
 
 // Known reports whether v is a verb this agent implements. Everything else is
@@ -131,6 +147,12 @@ func Verbs() []Verb {
 func NeedsServer(v Verb) bool {
 	switch v {
 	case VerbPing, VerbAgentInfo, VerbServerList:
+		return false
+	case VerbProvisionTemplates, VerbProvisionInstall:
+		// 🚨 Provisioning CREATES a server, so requiring it to name one that
+		// already exists would make the verb impossible to call. The id it
+		// carries is validated by internal/provision instead, which is the only
+		// place that can turn it into a path.
 		return false
 	default:
 		return true
@@ -253,6 +275,17 @@ type ConfigParams struct {
 type VerifyParams struct {
 	Player string `json:"player"`
 	Code   string `json:"code"`
+}
+
+// ProvisionParams is the payload of provision.install.
+//
+// 🚨 Two strings, both validated before either can become a path: Template
+// against the operator's declared list, ID against a pattern that cannot
+// express `..`, a slash or a leading dash. See internal/provision.
+type ProvisionParams struct {
+	Template string `json:"template"`
+	ID       string `json:"id"`
+	Name     string `json:"name,omitempty"`
 }
 
 // ---- results -------------------------------------------------------------

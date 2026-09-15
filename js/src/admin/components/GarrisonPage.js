@@ -1,6 +1,7 @@
 import app from 'flarum/admin/app';
 import ExtensionPage from 'flarum/admin/components/ExtensionPage';
 
+import Provision from './Provision';
 import Schedules from './Schedules';
 import { extract } from '../text';
 import Button from 'flarum/common/components/Button';
@@ -238,6 +239,15 @@ export default class GarrisonPage extends ExtensionPage {
                   { className: 'Button Button--danger', onclick: () => this.unpair(a) },
                   this.t('unpair')
                 )}
+
+                {/*
+                  🚨 Per HOST, because that is what a template belongs to. An
+                  install writes to one machine's disk, downloads over one
+                  machine's connection, and lands in one machine's config — a
+                  forum-wide "add a server" button would have to ask which host
+                  anyway, one question later than it needs to.
+                */}
+                <Provision agent={a} servers={this.state.servers || []} />
               </li>
             ))}
           </ul>

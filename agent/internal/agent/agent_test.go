@@ -7,12 +7,14 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/ernestdefoe/garrison/internal/driver"
 	"github.com/ernestdefoe/garrison/internal/players"
 	"github.com/ernestdefoe/garrison/internal/protocol"
+	"github.com/ernestdefoe/garrison/internal/provision"
 	"github.com/ernestdefoe/garrison/internal/settings"
 )
 
@@ -524,7 +526,7 @@ func TestABadPlayerPatternDoesNotStopTheAgent(t *testing.T) {
 
 	var mentioned bool
 
-	for _, f := range Check(context.Background(), []driver.Server{
+	for _, f := range Check(context.Background(), "", []driver.Server{
 		{ID: "broken", Name: "Broken", Driver: "fake", Players: players.Config{Join: `(?P<name>[`, Leave: `x`}},
 	}, []string{"fake"}, nil) {
 		if f.Server == "broken" && f.Bad && strings.Contains(f.Text, "players") {
@@ -534,5 +536,265 @@ func TestABadPlayerPatternDoesNotStopTheAgent(t *testing.T) {
 
 	if !mentioned {
 		t.Fatal("the bad pattern was not reported against the server it belongs to")
+	}
+}
+
+/*
+🚨 PROVISIONING IS THE ONE VERB THAT MAKES THE AGENT WRITE ITS OWN ALLOWLIST.
+
+Everything else in this protocol operates on servers an operator already
+declared. This one creates them — so the question "can a compromised forum make
+this agent run something the operator never approved?" has to be answered out
+loud, not inferred from the fact that the fields look safe.
+*/
+func provisioningAgent(t *testing.T, root string) (*Agent, *[]driver.Server) {
+	t.Helper()
+
+	a, err := New(context.Background(),
+		[]driver.Server{{ID: "existing", Name: "Existing", Driver: "fake"}},
+		driver.Set{"fake": &fakeDriver{name: "fake"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var registered []driver.Server
+
+	a.Provisioning([]provision.Template{{
+		ID:          "valheim",
+		Label:       "Valheim",
+		Driver:      "fake",
+		InstallRoot: root,
+		Command:     "./start.sh",
+		// No SteamApp: Install returns immediately, so these tests are about
+		// the boundary rather than about downloading a game.
+	}}, func(s driver.Server) error {
+		registered = append(registered, s)
+
+		return nil
+	})
+
+	return a, &registered
+}
+
+func TestProvisioningRefusesAnUndeclaredTemplate(t *testing.T) {
+	a, registered := provisioningAgent(t, t.TempDir())
+
+	params, _ := json.Marshal(protocol.ProvisionParams{Template: "minecraft", ID: "mc"})
+
+	res := a.Handle(context.Background(), protocol.Request{
+		ID: "1", Verb: protocol.VerbProvisionInstall, Params: params,
+	}, func(protocol.Event) {})
+
+	if res.OK {
+		t.Fatal("an undeclared template was installed")
+	}
+
+	if len(*registered) != 0 {
+		t.Fatalf("something was registered: %+v", *registered)
+	}
+}
+
+// 🚨 Every one of these is a name a compromised forum would send, and each must
+// fail before it can become a directory on the host.
+func TestProvisioningRefusesADangerousId(t *testing.T) {
+	a, registered := provisioningAgent(t, t.TempDir())
+
+	for _, id := range []string{
+		"../../etc/cron.d/x",
+		"/etc/passwd",
+		"..",
+		"-rf",
+		"has space",
+		"",
+	} {
+		params, _ := json.Marshal(protocol.ProvisionParams{Template: "valheim", ID: id})
+
+		res := a.Handle(context.Background(), protocol.Request{
+			ID: "1", Verb: protocol.VerbProvisionInstall, Params: params,
+		}, func(protocol.Event) {})
+
+		if res.OK {
+			t.Errorf("the id %q was accepted", id)
+		}
+	}
+
+	if len(*registered) != 0 {
+		t.Fatalf("something was registered: %+v", *registered)
+	}
+}
+
+func TestProvisioningRefusesAnExistingServer(t *testing.T) {
+	a, _ := provisioningAgent(t, t.TempDir())
+
+	params, _ := json.Marshal(protocol.ProvisionParams{Template: "valheim", ID: "existing"})
+
+	res := a.Handle(context.Background(), protocol.Request{
+		ID: "1", Verb: protocol.VerbProvisionInstall, Params: params,
+	}, func(protocol.Event) {})
+
+	if res.OK {
+		t.Fatal("an id that already exists was accepted")
+	}
+}
+
+// 🚨 The template list must not leak where games live on disk. Knowing that is
+// the first half of doing something about it.
+func TestTheTemplateListLeaksNoPaths(t *testing.T) {
+	root := "/very/specific/install/root"
+	a, _ := provisioningAgent(t, root)
+
+	res := a.Handle(context.Background(), protocol.Request{
+		ID: "1", Verb: protocol.VerbProvisionTemplates,
+	}, func(protocol.Event) {})
+
+	if !res.OK {
+		t.Fatalf("listing templates failed: %+v", res.Error)
+	}
+
+	if strings.Contains(string(res.Data), root) || strings.Contains(string(res.Data), "start.sh") {
+		t.Fatalf("the template list leaks the install path: %s", res.Data)
+	}
+}
+
+/*
+A whole install, end to end: the server is persisted, then served, and the
+progress lands as console output for the server being created — which is the
+panel somebody installing a game is already watching.
+*/
+func TestAProvisionedServerIsPersistedThenServed(t *testing.T) {
+	root := t.TempDir()
+	a, registered := provisioningAgent(t, root)
+
+	var lines []string
+	var mu sync.Mutex
+
+	emit := func(e protocol.Event) {
+		var line protocol.Line
+		if json.Unmarshal(e.Data, &line) == nil {
+			mu.Lock()
+			lines = append(lines, line.Text)
+			mu.Unlock()
+		}
+	}
+
+	params, _ := json.Marshal(protocol.ProvisionParams{Template: "valheim", ID: "valheim-2", Name: "Second world"})
+
+	res := a.Handle(context.Background(), protocol.Request{
+		ID: "1", Verb: protocol.VerbProvisionInstall, Params: params,
+	}, emit)
+
+	if !res.OK {
+		t.Fatalf("install was refused: %+v", res.Error)
+	}
+
+	// 🚨 It returns as soon as the install STARTS — a Steam download can be
+	// twenty gigabytes, and holding the poll open would time out, be retried,
+	// and start a second download into the same directory.
+	deadline := time.Now().Add(5 * time.Second)
+
+	for time.Now().Before(deadline) {
+		a.mu.Lock()
+		_, done := a.servers["valheim-2"]
+		a.mu.Unlock()
+
+		if done {
+			break
+		}
+
+		time.Sleep(20 * time.Millisecond)
+	}
+
+	if len(*registered) != 1 {
+		t.Fatalf("the server was not persisted: %+v", *registered)
+	}
+
+	if (*registered)[0].Dir != filepath.Join(root, "valheim-2") {
+		t.Fatalf("persisted with the wrong directory: %q", (*registered)[0].Dir)
+	}
+
+	a.mu.Lock()
+	served, ok := a.servers["valheim-2"]
+	a.mu.Unlock()
+
+	if !ok {
+		t.Fatal("the server was persisted but is not being served")
+	}
+
+	if served.Name != "Second world" {
+		t.Fatalf("the name is %q", served.Name)
+	}
+
+	mu.Lock()
+	joined := strings.Join(lines, "\n")
+	mu.Unlock()
+
+	if !strings.Contains(joined, "ready to start") {
+		t.Fatalf("the install never reported finishing:\n%s", joined)
+	}
+}
+
+/*
+🚨 A server that could not be written down must NOT be served.
+
+It would work perfectly until the next agent restart and then silently
+disappear, along with any backups scheduled for it — and the operator would have
+no reason to connect the two events.
+*/
+func TestAServerThatCannotBePersistedIsNotServed(t *testing.T) {
+	a, err := New(context.Background(), nil, driver.Set{"fake": &fakeDriver{name: "fake"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	a.Provisioning([]provision.Template{{
+		ID: "valheim", Driver: "fake", InstallRoot: t.TempDir(), Command: "./start.sh",
+	}}, func(driver.Server) error {
+		return fmt.Errorf("the disk is full")
+	})
+
+	var lines []string
+	var mu sync.Mutex
+
+	params, _ := json.Marshal(protocol.ProvisionParams{Template: "valheim", ID: "valheim-2"})
+
+	a.Handle(context.Background(), protocol.Request{
+		ID: "1", Verb: protocol.VerbProvisionInstall, Params: params,
+	}, func(e protocol.Event) {
+		var line protocol.Line
+		if json.Unmarshal(e.Data, &line) == nil {
+			mu.Lock()
+			lines = append(lines, line.Text)
+			mu.Unlock()
+		}
+	})
+
+	deadline := time.Now().Add(5 * time.Second)
+
+	for time.Now().Before(deadline) {
+		mu.Lock()
+		said := strings.Join(lines, "\n")
+		mu.Unlock()
+
+		if strings.Contains(said, "could not be saved") {
+			break
+		}
+
+		time.Sleep(20 * time.Millisecond)
+	}
+
+	a.mu.Lock()
+	_, served := a.servers["valheim-2"]
+	a.mu.Unlock()
+
+	if served {
+		t.Fatal("a server that could not be persisted is being served anyway")
+	}
+
+	mu.Lock()
+	said := strings.Join(lines, "\n")
+	mu.Unlock()
+
+	if !strings.Contains(said, "the disk is full") {
+		t.Fatalf("the reason was not reported:\n%s", said)
 	}
 }

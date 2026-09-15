@@ -49,7 +49,7 @@ type Finding struct {
 // Check inspects a whole configuration and reports what it finds.
 //
 // ctx bounds the network checks. Everything else is local and immediate.
-func Check(ctx context.Context, servers []driver.Server, available []string, unavailable []string) []Finding {
+func Check(ctx context.Context, configPath string, servers []driver.Server, available []string, unavailable []string) []Finding {
 	var out []Finding
 
 	add := func(server string, bad bool, format string, args ...any) {
@@ -58,6 +58,8 @@ func Check(ctx context.Context, servers []driver.Server, available []string, una
 
 	sort.Strings(available)
 	add("", false, "drivers available: %s", strings.Join(available, ", "))
+
+	checkConfigFilePermissions(configPath, add)
 
 	for _, u := range unavailable {
 		// Not a failure: a host without Docker is a perfectly good host, and
@@ -91,6 +93,36 @@ func Check(ctx context.Context, servers []driver.Server, available []string, una
 	}
 
 	return out
+}
+
+/*
+checkConfigFilePermissions warns when the agent's own config is readable by
+anyone on the host.
+
+🚨 THAT FILE HOLDS THE AGENT'S TOKEN, and the token is the whole of this agent's
+authority: anything that can read it can impersonate the host to the forum, and
+the operator's off-site bucket keys are usually in the same file.
+
+A world-readable config is not something an operator will notice — it is the
+default umask on most distributions, and nothing about a working agent looks
+different. Saying it once, at install time, is the only moment it gets fixed.
+*/
+func checkConfigFilePermissions(path string, add func(string, bool, string, ...any)) {
+	if path == "" {
+		return
+	}
+
+	info, err := os.Stat(path)
+	if err != nil {
+		return
+	}
+
+	mode := info.Mode().Perm()
+
+	// Anything readable by group or other.
+	if mode&0o077 != 0 {
+		add("", true, "%s is mode %04o — it holds this agent's token and any off-site keys, so it should be 0600", path, mode)
+	}
 }
 
 func checkBackups(s driver.Server, add func(string, bool, string, ...any)) {

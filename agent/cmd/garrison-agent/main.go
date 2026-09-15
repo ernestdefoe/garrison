@@ -49,6 +49,19 @@ func main() {
 	}
 
 	ag, unavailable := agent.New(ctx, cfg.Servers, candidates)
+
+	/*
+	 * 🚨 Provisioning is wired HERE, from a config that came from a file — so
+	 * `register` writes back to that same file and a provisioned server
+	 * survives a restart.
+	 *
+	 * An agent built any other way gets no templates and no register function,
+	 * which means provision.install simply reports that it cannot persist
+	 * anything. That is the right default: the ability to add servers should
+	 * follow from an operator having written a config, not from the code
+	 * happening to be running.
+	 */
+	ag.Provisioning(cfg.Templates, cfg.Add)
 	for _, u := range unavailable {
 		// Not an error. A host with no Docker is a host Garrison supports; it
 		// simply cannot run the servers configured for that driver, and the
@@ -65,7 +78,7 @@ func main() {
 		 * somebody already suspects a problem — which is far too late for the
 		 * things it catches.
 		 */
-		if !report(ctx, cfg.Servers, ag) {
+		if !report(ctx, cfg.Path(), cfg.Servers, ag) {
 			os.Exit(1)
 		}
 
@@ -110,8 +123,8 @@ operator fixing a hand-written JSON file wants the list — stopping at the firs
 problem turns one editing session into a game of whack-a-mole with an agent
 restart between each round.
 */
-func report(ctx context.Context, servers []driver.Server, ag *agent.Agent) bool {
-	findings := agent.Check(ctx, servers, ag.Drivers(), ag.Unavailable())
+func report(ctx context.Context, configPath string, servers []driver.Server, ag *agent.Agent) bool {
+	findings := agent.Check(ctx, configPath, servers, ag.Drivers(), ag.Unavailable())
 
 	byServer := map[string][]agent.Finding{}
 	var order []string
