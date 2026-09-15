@@ -328,6 +328,17 @@ ernestdefoe-garrison:
       warn_line: What to tell them
       warn_line_placeholder: "say Restarting in 15 minutes — finish up and log out"
 
+    # 🚨 A member can unlink their own character. This is for the case an
+    # operator actually gets asked about: somebody who linked a character, left
+    # the community, and whose in-game name the next player now has.
+    identities: Linked accounts
+    no_identities: Nobody has linked a forum account to an in-game character yet.
+    identity_pending: Waiting for their code
+    # Names what SURVIVES, because "unlink" reads like it might delete the
+    # playtime too — and an operator who believes that will not press it.
+    identity_unlink_confirm: "Unlink {player}? Their time played stays on the server's leaderboard; only the connection to a forum account is removed."
+    identity_unlink: Unlink
+
     hosts: Game hosts
     no_hosts: No hosts paired yet. Give one a name and pair it, then put the token in that host's agent config.
     host_name_placeholder: A name for the host

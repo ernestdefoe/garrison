@@ -166,7 +166,8 @@ $extenders = [
 
         ->post('/garrison/admin/servers/{id}/schedules', 'garrison.admin.scheduleCreate', AdminController::class)
         ->patch('/garrison/admin/schedules/{id}', 'garrison.admin.scheduleUpdate', AdminController::class)
-        ->delete('/garrison/admin/schedules/{id}', 'garrison.admin.scheduleDelete', AdminController::class),
+        ->delete('/garrison/admin/schedules/{id}', 'garrison.admin.scheduleDelete', AdminController::class)
+        ->delete('/garrison/admin/identities/{id}', 'garrison.admin.unlink', AdminController::class),
 
     /*
      * Four permissions, and console is separate from control on purpose.

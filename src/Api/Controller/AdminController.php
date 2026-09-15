@@ -7,6 +7,7 @@ use ErnestDefoe\Garrison\Agent\TokenGuard;
 use ErnestDefoe\Garrison\Game\Artwork;
 use ErnestDefoe\Garrison\Game\Catalog;
 use ErnestDefoe\Garrison\Model\GarrisonAgent;
+use ErnestDefoe\Garrison\Model\Identity;
 use ErnestDefoe\Garrison\Model\Incident;
 use ErnestDefoe\Garrison\Model\Schedule;
 use ErnestDefoe\Garrison\Model\Server;
@@ -57,6 +58,7 @@ class AdminController implements RequestHandlerInterface
             'garrison.admin.scheduleCreate' => $this->createSchedule($request),
             'garrison.admin.scheduleUpdate' => $this->updateSchedule($request),
             'garrison.admin.scheduleDelete' => $this->deleteSchedule($request),
+            'garrison.admin.unlink' => $this->unlinkIdentity($request),
             default => new JsonResponse(['errors' => [['code' => 'not_found']]], 404),
         };
     }
@@ -111,6 +113,34 @@ class AdminController implements RequestHandlerInterface
 
             'schedules' => Schedule::query()->orderBy('server_id')->orderBy('at_minute')->get()
                 ->map(fn (Schedule $s) => $this->scheduleRow($s))->values()->all(),
+
+            /*
+             * 🚨 Who is linked to whom, because somebody has to be able to
+             * undo it.
+             *
+             * A member can unlink their OWN character, and that covers the
+             * honest cases. What it does not cover is the one an operator
+             * actually gets asked about: somebody who linked a character,
+             * left the community, and whose name the next player now has —
+             * or a link made in error by somebody who has since lost their
+             * forum account. Without this, the answer to "can you unlink
+             * that?" is no, and the only fix is the database.
+             *
+             * Unverified claims are included and marked. They are pending
+             * rather than wrong, and an operator looking at this list is
+             * usually trying to work out why somebody's link did not take.
+             */
+            'identities' => Identity::query()->with('user')->orderBy('server_id')->get()
+                ->map(fn (Identity $i) => [
+                    'id' => $i->id,
+                    'serverId' => $i->server_id,
+                    'player' => $i->player,
+                    'verified' => $i->isVerified(),
+                    'userId' => $i->user?->id,
+                    'username' => $i->user?->username,
+                    'displayName' => $i->user?->display_name,
+                    'since' => $i->verified_at?->toIso8601String(),
+                ])->values()->all(),
 
             'incidents' => Incident::query()->latest('id')->limit(25)->get()->map(fn (Incident $i) => [
                 'id' => $i->id,
@@ -319,6 +349,26 @@ class AdminController implements RequestHandlerInterface
 
         if ($schedule !== null) {
             $schedule->delete();
+        }
+
+        return new JsonResponse(['ok' => true]);
+    }
+
+    /**
+     * 🚨 Removes the link, and nothing else.
+     *
+     * It does not delete the play sessions: those record what happened in the
+     * game, which is true whether or not a forum account is attached to it.
+     * Deleting them would rewrite the server's leaderboard because somebody's
+     * forum link was wrong, and the next person to link that name would find
+     * their history had been thrown away.
+     */
+    protected function unlinkIdentity(ServerRequestInterface $request): ResponseInterface
+    {
+        $identity = Identity::query()->find((int) ($request->getQueryParams()['id'] ?? 0));
+
+        if ($identity !== null) {
+            $identity->delete();
         }
 
         return new JsonResponse(['ok' => true]);

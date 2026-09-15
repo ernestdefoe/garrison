@@ -53,6 +53,7 @@ export default class GarrisonPage extends ExtensionPage {
           {this.alerts()}
           {this.hosts()}
           {this.servers()}
+          {this.identities()}
           {this.incidents()}
         </div>
       </div>
@@ -432,6 +433,80 @@ export default class GarrisonPage extends ExtensionPage {
    * 05:14, healthy at 05:16" is the difference between trusting automatic
    * remediation and switching it off.
    */
+  /**
+   * Who is linked to which character, and the way to undo it.
+   *
+   * 🚨 A member can unlink their OWN character, which covers the honest cases.
+   * What it does not cover is the one an operator actually gets asked about:
+   * somebody who linked a character, left the community, and whose in-game name
+   * the next player now has. Without this the answer is "no", and the only fix
+   * is the database.
+   */
+  identities() {
+    const rows = this.state.identities || [];
+
+    return (
+      <section className="GarrisonAdmin-section">
+        <h2>{this.t('identities')}</h2>
+
+        {rows.length === 0 ? (
+          <p className="GarrisonAdmin-empty">{this.t('no_identities')}</p>
+        ) : (
+          <ul className="GarrisonAdmin-identities">
+            {rows.map((i) => {
+              const server = (this.state.servers || []).find((s) => s.id === i.serverId);
+
+              return (
+                <li className={'GarrisonAdmin-identity' + (i.verified ? '' : ' is-pending')} key={i.id}>
+                  <span className="GarrisonAdmin-identityPlayer">{i.player}</span>
+
+                  <span className="GarrisonAdmin-meta">
+                    {server ? server.name : '#' + i.serverId}
+                  </span>
+
+                  <span className="GarrisonAdmin-identityUser">
+                    {i.displayName || i.username || '—'}
+                  </span>
+
+                  {/*
+                    🚨 A pending claim is LABELLED rather than hidden. An
+                    operator looking at this list is usually trying to work out
+                    why somebody's link did not take, and a claim that is
+                    waiting for its code is the answer.
+                  */}
+                  {i.verified ? null : (
+                    <span className="GarrisonAdmin-tag">{this.t('identity_pending')}</span>
+                  )}
+
+                  {Button.component(
+                    {
+                      className: 'Button Button--link',
+                      onclick: () => this.unlink(i),
+                    },
+                    this.t('identity_unlink')
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+    );
+  }
+
+  unlink(identity) {
+    // Names what survives, because "unlink" reads like it might delete the
+    // playtime too — and an operator who believes that will not press it.
+    if (!confirm(extract(this.t('identity_unlink_confirm', { player: identity.player })))) return;
+
+    app
+      .request({
+        method: 'DELETE',
+        url: app.forum.attribute('apiUrl') + '/garrison/admin/identities/' + identity.id,
+      })
+      .then(() => this.load());
+  }
+
   incidents() {
     return (
       <section className="GarrisonAdmin-section">

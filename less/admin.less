@@ -319,3 +319,47 @@
 .GarrisonSchedule-remove {
   color: var(--muted-color);
 }
+
+/*
+ * Linked accounts.
+ */
+.GarrisonAdmin-identities {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.GarrisonAdmin-identity {
+  align-items: baseline;
+  border-top: 1px solid var(--control-bg);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  padding: 6px 0;
+}
+
+/*
+ * 🚨 Dimmed, not hidden. An operator looking at this list is usually trying to
+ * work out why somebody's link did not take, and a claim still waiting for its
+ * code is the answer they came for.
+ */
+.GarrisonAdmin-identity.is-pending {
+  opacity: 0.7;
+}
+
+.GarrisonAdmin-identityPlayer {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.GarrisonAdmin-identityUser {
+  margin-inline-start: auto;
+}
+
+.GarrisonAdmin-tag {
+  background: var(--control-bg);
+  border-radius: 10px;
+  color: var(--muted-color);
+  font-size: 11px;
+  padding: 1px 8px;
+}
