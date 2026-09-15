@@ -1,0 +1,165 @@
+import app from 'flarum/forum/app';
+import Page from 'flarum/common/components/Page';
+import IndexPage from 'flarum/forum/components/IndexPage';
+import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
+import humanTime from 'flarum/common/helpers/humanTime';
+
+import ServerControls from './ServerControls';
+import { all, isLoaded, lastError, subscribe } from '../store';
+
+/**
+ * The status page: every server, in full.
+ *
+ * 🚨 Reads the SAME store as the sidebar widget and every other host adapter.
+ * If this page fetched its own copy, a forum with the widget in the sidebar
+ * and this page open would make two requests where one will do — and the
+ * pattern, repeated per widget, is what once exhausted a database connection
+ * cap and took a whole forum down.
+ */
+export default class ServersPage extends Page {
+  oninit(vnode) {
+    super.oninit(vnode);
+    this.unsubscribe = null;
+    app.history.push('garrison', app.translator.trans('ernestdefoe-garrison.forum.title'));
+  }
+
+  oncreate(vnode) {
+    super.oncreate(vnode);
+    this.unsubscribe = subscribe(() => {});
+  }
+
+  onremove(vnode) {
+    super.onremove(vnode);
+    if (this.unsubscribe) this.unsubscribe();
+  }
+
+  view() {
+    return (
+      <div className="GarrisonPage IndexPage">
+        {IndexPage.prototype.hero ? null : null}
+        <div className="container">
+          <div className="sideNavContainer">
+            <div className="IndexPage-results sideNavOffset">
+              <h2 className="GarrisonPage-title">
+                {app.translator.trans('ernestdefoe-garrison.forum.title')}
+              </h2>
+              {this.body()}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  body() {
+    if (!isLoaded()) {
+      return <LoadingIndicator />;
+    }
+
+    const servers = all();
+
+    if (!servers.length) {
+      return (
+        <p className="GarrisonPage-empty">
+          {app.translator.trans(
+            lastError()
+              ? 'ernestdefoe-garrison.forum.unreachable'
+              : 'ernestdefoe-garrison.forum.no_servers'
+          )}
+        </p>
+      );
+    }
+
+    return <ul className="GarrisonCards">{servers.map((s) => this.card(s))}</ul>;
+  }
+
+  card(s) {
+    const stale = s.stale || s.agentLate;
+    const running = s.state === 'running';
+
+    return (
+      <li className={'GarrisonCard' + (stale ? ' GarrisonCard--stale' : '')} key={s.id}>
+        <div className="GarrisonCard-head">
+          <span className={`GarrisonServer-state GarrisonServer-state--${s.state}`} aria-hidden="true" />
+          <h3 className="GarrisonCard-name">{s.name}</h3>
+          <span className="GarrisonCard-state">
+            {app.translator.trans(`ernestdefoe-garrison.forum.state.${s.state}`)}
+          </span>
+          <ServerControls server={s} />
+        </div>
+
+        {/*
+          🚨 Staleness is said out loud, above everything else on the card.
+          "Running, last heard from 40 minutes ago" is a completely different
+          fact from "Running", and a panel that confidently shows the second
+          when it means the first is precisely how a twenty-hour outage goes
+          unnoticed. That outage is why this product exists.
+        */}
+        {stale ? (
+          <p className="GarrisonCard-stale">
+            {app.translator.trans('ernestdefoe-garrison.forum.stale', {
+              when: s.lastStatusAt ? humanTime(s.lastStatusAt) : '—',
+            })}
+          </p>
+        ) : null}
+
+        {/*
+          🚨 CPU and memory ONLY while running. They are the last sample taken,
+          and for a stopped server that is a memory of when it was up — a
+          stopped process is using no CPU and no memory, so showing "0% / 3.4
+          MiB" states something untrue with the same confidence as everything
+          else on the card. A fact that is not currently a fact is omitted.
+        */}
+        <dl className="GarrisonCard-facts">
+          {this.fact('players', running && s.playersOnline != null ? (s.playersMax ? `${s.playersOnline}/${s.playersMax}` : String(s.playersOnline)) : null)}
+          {this.fact('cpu', running && s.cpuPercent != null ? `${s.cpuPercent}%` : null)}
+          {this.fact('memory', running && s.memoryBytes != null ? bytes(s.memoryBytes) + (s.statsApproximate ? ' ≈' : '') : null)}
+          {this.fact('uptime', running && s.runningSince ? humanTime(s.runningSince) : null)}
+          {this.fact('driver', s.driver)}
+        </dl>
+
+        {s.joinAddress || s.joinCode ? (
+          <div className="GarrisonCard-join">
+            <span className="GarrisonCard-joinLabel">
+              {app.translator.trans('ernestdefoe-garrison.forum.join')}
+            </span>
+            {s.joinAddress ? <code className="GarrisonCard-joinValue">{s.joinAddress}</code> : null}
+            {s.joinCode ? (
+              <code className="GarrisonCard-joinValue">
+                {app.translator.trans('ernestdefoe-garrison.forum.join_code', { code: s.joinCode })}
+              </code>
+            ) : null}
+          </div>
+        ) : null}
+      </li>
+    );
+  }
+
+  /** A fact is omitted entirely when unknown, never rendered as an empty row. */
+  fact(key, value) {
+    if (value === null || value === undefined || value === '') return null;
+
+    return [
+      <dt key={key + '-t'}>{app.translator.trans(`ernestdefoe-garrison.forum.fact.${key}`)}</dt>,
+      <dd key={key + '-d'}>{value}</dd>,
+    ];
+  }
+}
+
+/**
+ * 🚨 Binary units, because that is what every one of these sources reports.
+ * Docker says GiB, cgroup counts pages, /proc counts pages. Dividing by 1000
+ * would show a number that disagrees with `docker stats` on the same machine,
+ * and the operator would believe the panel over their own eyes exactly once.
+ */
+function bytes(n) {
+  const units = ['B', 'KiB', 'MiB', 'GiB', 'TiB'];
+  let i = 0;
+
+  while (n >= 1024 && i < units.length - 1) {
+    n /= 1024;
+    i++;
+  }
+
+  return (i === 0 ? n : n.toFixed(n >= 10 ? 0 : 1)) + ' ' + units[i];
+}

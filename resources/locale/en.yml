@@ -22,6 +22,23 @@ ernestdefoe-garrison:
     unreachable: Could not reach the forum for server status.
     join_hidden: Join details are not shown to your group.
     widget_heading: Heading
+    see_all: All servers
+    join: How to join
+    join_code: "Join code {code}"
+    action_failed: That did not work. Try again in a moment.
+    confirm_stop: "Stop {name}? Anybody playing will be disconnected."
+
+    action:
+      start: Start
+      stop: Stop
+      restart: Restart
+
+    fact:
+      players: Players
+      cpu: CPU
+      memory: Memory
+      uptime: Started
+      driver: Runs as
 
   admin:
     title: Garrison

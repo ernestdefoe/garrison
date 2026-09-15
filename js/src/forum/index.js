@@ -1,7 +1,10 @@
 import app from 'flarum/forum/app';
 import { extend } from 'flarum/common/extend';
 
+import LinkButton from 'flarum/common/components/LinkButton';
+
 import ServerList from './components/ServerList';
+import ServersPage from './components/ServersPage';
 import registerWidgetHosts from './hosts';
 
 /**
@@ -9,6 +12,8 @@ import registerWidgetHosts from './hosts';
  * frameworks installed, and must not double up when several are.
  */
 app.initializers.add('ernestdefoe-garrison', () => {
+  app.routes.garrison = { path: '/garrison', component: ServersPage };
+
   registerWidgetHosts(app, () => <ServerList />);
 
   /*
@@ -30,6 +35,15 @@ app.initializers.add('ernestdefoe-garrison', () => {
       <div className="GarrisonSidebar">
         <h4 className="GarrisonSidebar-title">
           {app.translator.trans('ernestdefoe-garrison.forum.title')}
+
+          {/*
+            The heading links to the full page, matching how Calendar's own
+            sidebar item behaves on this forum. A widget that shows three
+            servers and offers no way to the rest is a dead end.
+          */}
+          <a className="GarrisonSidebar-more" href={app.route('garrison')} config={m.route.link}>
+            {app.translator.trans('ernestdefoe-garrison.forum.see_all')}
+          </a>
         </h4>
         <ServerList />
       </div>,

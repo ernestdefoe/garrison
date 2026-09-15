@@ -43,8 +43,18 @@ var (
 )
 
 type cpuReading struct {
-	at    time.Time
-	ticks uint64
+	at time.Time
+	// CPU time consumed, in SECONDS.
+	//
+	// 🚨 Seconds, not "ticks" or "usec". Both sources count CPU time in their
+	// own unit — cgroup v2 in microseconds, /proc in USER_HZ jiffies — and the
+	// first version of this file passed each one's raw counter into a shared
+	// rate function with a comment claiming they matched. They did not: usec
+	// was multiplied by 10 where it needed dividing by 10,000, and a freshly
+	// started process reported **10,705% CPU** on the status page. Converting
+	// at the source, into one obvious unit, makes that class of mistake
+	// impossible rather than merely unlikely.
+	seconds float64
 }
 
 func sampleProcessTree(pid int) (sample, error) {
@@ -90,7 +100,7 @@ func sampleCgroup2(pid int) (sample, error) {
 	}
 
 	if usec, err := readCPUStat(filepath.Join(base, "cpu.stat")); err == nil {
-		out.CPUPercent = cpuRate(pid, usec*10 /* µs -> 10ms ticks, same unit as /proc */)
+		out.CPUPercent = cpuRate(pid, float64(usec)/1e6) // microseconds -> seconds
 	}
 	if n, err := countPIDs(filepath.Join(base, "cgroup.procs")); err == nil {
 		out.Processes = n
@@ -162,7 +172,9 @@ func sampleProc(root int) (sample, error) {
 			out.MemoryBytes += rss
 		}
 	}
-	out.CPUPercent = cpuRate(root, ticks)
+	// USER_HZ is 100 on every Linux Go builds for, so a jiffy is 10ms.
+	const userHz = 100
+	out.CPUPercent = cpuRate(root, float64(ticks)/userHz)
 	return out, nil
 }
 
@@ -255,26 +267,31 @@ func descendants(root int) ([]int, error) {
 	return out, nil
 }
 
-// cpuRate turns a monotonic tick counter into a percentage using the previous
-// reading for the same PID.
-func cpuRate(pid int, ticks uint64) float64 {
-	now := time.Now()
+// cpuRate turns a monotonic counter of CPU SECONDS into a percentage, using
+// the previous reading for the same PID.
+func cpuRate(pid int, seconds float64) float64 {
+	return rateFrom(&cpuMu, cpuPrev, pid, seconds, time.Now())
+}
 
-	cpuMu.Lock()
-	defer cpuMu.Unlock()
+// rateFrom is the arithmetic on its own, so it can be tested without a real
+// process and without waiting a second between samples.
+func rateFrom(mu *sync.Mutex, prevs map[int]cpuReading, pid int, seconds float64, now time.Time) float64 {
+	mu.Lock()
+	defer mu.Unlock()
 
-	prev, ok := cpuPrev[pid]
-	cpuPrev[pid] = cpuReading{at: now, ticks: ticks}
+	prev, ok := prevs[pid]
+	prevs[pid] = cpuReading{at: now, seconds: seconds}
+
 	if !ok {
 		return 0 // first reading: a counter is not a rate
 	}
 
 	elapsed := now.Sub(prev.at).Seconds()
-	if elapsed <= 0 || ticks < prev.ticks {
-		return 0 // clock went backwards, or the process restarted
+	if elapsed <= 0 || seconds < prev.seconds {
+		return 0 // clock went backwards, or the process restarted and reset
 	}
-	const hz = 100 // USER_HZ, fixed at 100 on every Linux Go will run on
-	return (float64(ticks-prev.ticks) / hz) / elapsed * 100
+
+	return (seconds - prev.seconds) / elapsed * 100
 }
 
 // Forget drops remembered CPU readings for a PID that has gone away, so the

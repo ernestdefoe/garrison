@@ -18,7 +18,20 @@ $extenders = [
 
     (new Extend\Frontend('forum'))
         ->js(__DIR__ . '/js/dist/forum.js')
-        ->css(__DIR__ . '/less/forum.less'),
+        ->css(__DIR__ . '/less/forum.less')
+
+        /*
+         * 🚨 The status page needs registering on the PHP side as well as in
+         * the JS router. Without this, clicking through to /garrison inside
+         * the app works — Mithril handles it client-side — and loading the
+         * same URL directly, or refreshing on it, or following a link anybody
+         * shared, returns a bare 404 from the server, because nothing there
+         * knows to serve the forum shell for that path.
+         *
+         * The kind of bug that never shows up while you are developing,
+         * because you always arrive by clicking.
+         */
+        ->route('/garrison', 'garrison'),
 
     (new Extend\Console())->command(PairCommand::class),
 

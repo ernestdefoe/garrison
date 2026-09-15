@@ -66,3 +66,131 @@
 .GarrisonServer--stale {
   opacity: 0.55;
 }
+
+/* ---------- the sidebar heading link ---------- */
+
+.GarrisonSidebar-title {
+  align-items: baseline;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.GarrisonSidebar-more {
+  font-size: 12px;
+  font-weight: 400;
+}
+
+/* ---------- the status page ---------- */
+
+.GarrisonPage-title {
+  margin: 0 0 16px;
+}
+
+.GarrisonCards {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.GarrisonCard {
+  background: var(--body-bg);
+  border: 1px solid var(--control-bg);
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+}
+
+.GarrisonCard-head {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.GarrisonCard-name {
+  flex: 1 1 auto;
+  font-size: 16px;
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.GarrisonCard-state {
+  color: var(--muted-color);
+  flex: none;
+  font-size: 13px;
+}
+
+/*
+ * 🚨 Stale is a warning, not a shade of grey. On a card the whole point is
+ * that "Running" and "Running, last heard from 40 minutes ago" must not look
+ * the same at a glance.
+ */
+.GarrisonCard--stale {
+  border-color: var(--alert-warning-bg, #93670a);
+}
+
+.GarrisonCard-stale {
+  color: var(--muted-color);
+  font-size: 13px;
+  margin: 0;
+}
+
+.GarrisonCard-facts {
+  display: grid;
+  gap: 2px 12px;
+  grid-template-columns: auto 1fr;
+  margin: 0;
+
+  dt {
+    color: var(--muted-color);
+    font-size: 13px;
+  }
+
+  dd {
+    font-size: 13px;
+    // Figures line up down the column rather than jittering as they change.
+    font-variant-numeric: tabular-nums;
+    margin: 0;
+  }
+}
+
+.GarrisonCard-join {
+  align-items: center;
+  border-top: 1px solid var(--control-bg);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 10px;
+}
+
+.GarrisonCard-joinLabel {
+  color: var(--muted-color);
+  font-size: 13px;
+}
+
+.GarrisonCard-joinValue {
+  // Selectable and monospaced: an address exists to be copied.
+  font-size: 12px;
+  user-select: all;
+}
+
+.GarrisonControls {
+  align-items: center;
+  display: flex;
+  flex: none;
+  gap: 4px;
+}
+
+.GarrisonControls-error {
+  color: var(--error-color);
+  font-size: 12px;
+  margin-right: 4px;
+}
