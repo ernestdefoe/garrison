@@ -51,7 +51,9 @@ class GarrisonServiceProvider extends AbstractServiceProvider
         $this->container->singleton(Webhooks::class, function ($container) {
             return new Webhooks(
                 $container->make(SettingsRepositoryInterface::class),
-                $container->make(LoggerInterface::class)
+                $container->make(LoggerInterface::class),
+                $container->make(TranslatorInterface::class),
+                $container->make(\Flarum\Http\UrlGenerator::class)
             );
         });
 

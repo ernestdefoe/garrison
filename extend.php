@@ -6,6 +6,7 @@
 
 use ErnestDefoe\Garrison\Api\Controller\AdminController;
 use ErnestDefoe\Garrison\Api\Controller\AgentPollController;
+use ErnestDefoe\Garrison\Api\Controller\CommandStatusController;
 use ErnestDefoe\Garrison\Api\Controller\ConsoleController;
 use ErnestDefoe\Garrison\Api\Controller\ListServersController;
 use ErnestDefoe\Garrison\Api\Controller\QueueCommandController;
@@ -41,7 +42,18 @@ $extenders = [
          * The kind of bug that never shows up while you are developing,
          * because you always arrive by clicking.
          */
-        ->route('/garrison', 'garrison'),
+        ->route('/garrison', 'garrison')
+
+        /*
+         * 🚨 And the per-server page, for the same reason and more sharply.
+         *
+         * Every alert Garrison sends links here. An email arriving at 3am, a
+         * notification, a link pasted into a staff channel — all of them are
+         * DIRECT loads, which is exactly the case a client-side route does not
+         * cover. Missing this would 404 the one path the product's own
+         * notifications take.
+         */
+        ->route('/garrison/s/{id}', 'garrison.server'),
 
     (new Extend\Console())
         ->command(PairCommand::class)
@@ -92,6 +104,14 @@ $extenders = [
         ->get('/garrison/servers', 'garrison.servers', ListServersController::class)
         ->post('/garrison/servers/{id}/command', 'garrison.command', QueueCommandController::class)
         ->get('/garrison/servers/{id}/console', 'garrison.console', ConsoleController::class)
+
+        /*
+         * 🚨 Readable, because a 202 is not an outcome. Restoring a world is
+         * the most consequential thing this product does and it would
+         * otherwise be the action with the least feedback — see the
+         * controller.
+         */
+        ->get('/garrison/commands/{id}', 'garrison.command.status', CommandStatusController::class)
 
         /*
          * Admin. Every one of these resolves the same controller, which

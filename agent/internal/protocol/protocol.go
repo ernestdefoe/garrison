@@ -245,6 +245,41 @@ type Status struct {
 	// "running" and "players can get in" are different facts, and the whole
 	// product exists because they were conflated for twenty hours.
 	Health any `json:"health,omitempty"`
+
+	/*
+	 * Backups ride along with status, for the same reason Stats does — and
+	 * for one more.
+	 *
+	 * 🚨 A LIST SOMEBODY HAS TO ASK FOR IS A LIST THEY SEE TOO LATE.
+	 *
+	 * The obvious design is a backup.list verb the forum queues when somebody
+	 * opens the backups panel. It works, and it puts a round trip through a
+	 * long-poll — up to half a minute of an empty panel — between an operator
+	 * and the answer to "is there anything to restore?". That question is
+	 * asked at exactly one moment: just after something went badly wrong. The
+	 * worst possible time to show a spinner is the moment somebody is deciding
+	 * whether they have lost a world.
+	 *
+	 * Shipping it on the poll costs a directory read per server per cycle and
+	 * a few hundred bytes, and means the forum can always answer instantly,
+	 * even while the host is mid-restart or has just gone offline. backup.list
+	 * still exists as a verb, because a forum that has just paired an agent
+	 * should not have to wait a poll for its first answer either.
+	 */
+	Backups []Backup `json:"backups,omitempty"`
+}
+
+// Backup is one archive the agent is holding.
+//
+// 🚨 Duplicated from internal/backup rather than imported, because protocol is
+// the wire contract and must not depend on an implementation package — the
+// forum's half of this contract is PHP and has no idea that package exists.
+// The two are kept in step by TestProtocolBackupMatchesImplementation.
+type Backup struct {
+	ID     string    `json:"id"`
+	Size   int64     `json:"size"`
+	At     time.Time `json:"at"`
+	Safety bool      `json:"safety,omitempty"`
 }
 
 // Stats is one resource sample.

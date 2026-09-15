@@ -1,0 +1,257 @@
+import app from 'flarum/forum/app';
+import Page from 'flarum/common/components/Page';
+import LinkButton from 'flarum/common/components/LinkButton';
+import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
+import humanTime from 'flarum/common/helpers/humanTime';
+
+import Backups from './Backups';
+import Console from './Console';
+import ServerControls from './ServerControls';
+import { bytes } from '../format';
+import { serverMark } from '../marks';
+import { byId, isLoaded, lastError, subscribe } from '../store';
+
+/**
+ * One server, in full, at a URL of its own.
+ *
+ * 🚨 A URL of its own is the point, not a nicer layout.
+ *
+ * Everything on this page could be squeezed onto a card, and some of it is.
+ * What a card cannot do is be linked to. An alert that says "Shattered Pact
+ * stopped accepting players" and links to a list of eleven servers has handed
+ * its reader a search task at the moment they are least able to do one; the
+ * email that arrives at 3am has to open the thing it is about. The same goes
+ * for the link somebody pastes into a staff channel.
+ *
+ * It also has room for the two things a card genuinely cannot carry: the
+ * backups panel — which until now had no reader at all, despite a fully
+ * tested engine behind it — and a console with enough height to read.
+ */
+export default class ServerPage extends Page {
+  oninit(vnode) {
+    super.oninit(vnode);
+
+    this.unsubscribe = null;
+    this.id = m.route.param('id');
+  }
+
+  oncreate(vnode) {
+    super.oncreate(vnode);
+    this.unsubscribe = subscribe(() => {});
+  }
+
+  onremove(vnode) {
+    super.onremove(vnode);
+    if (this.unsubscribe) this.unsubscribe();
+  }
+
+  view() {
+    return (
+      <div className="GarrisonPage GarrisonServerPage IndexPage">
+        <div className="container">
+          <div className="sideNavContainer">
+            <div className="IndexPage-results sideNavOffset">{this.body()}</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  body() {
+    if (!isLoaded()) return <LoadingIndicator />;
+
+    const s = byId(this.id);
+
+    /*
+     * 🚨 "Not here" rather than "does not exist", and the same message whether
+     * the server was deleted, belongs to an unpaired host, or is simply not
+     * visible to this person.
+     *
+     * Distinguishing them would turn this page into a way to enumerate
+     * private servers: a member could try ids and read the difference between
+     * "no such server" and "not for you". The back-link matters more than the
+     * wording — somebody who followed a stale link needs a way onwards.
+     */
+    if (!s) {
+      return (
+        <div className="GarrisonServerPage-missing">
+          <p>
+            {app.translator.trans(
+              lastError()
+                ? 'ernestdefoe-garrison.forum.unreachable'
+                : 'ernestdefoe-garrison.forum.server_not_here'
+            )}
+          </p>
+          {LinkButton.component(
+            { href: app.route('garrison'), className: 'Button' },
+            app.translator.trans('ernestdefoe-garrison.forum.back_to_all')
+          )}
+        </div>
+      );
+    }
+
+    app.setTitle(s.name);
+
+    const stale = s.stale || s.agentLate;
+    const running = s.state === 'running';
+
+    return [
+      <nav className="GarrisonServerPage-back" key="back">
+        {LinkButton.component(
+          { href: app.route('garrison'), className: 'Button Button--link', icon: 'fas fa-chevron-left' },
+          app.translator.trans('ernestdefoe-garrison.forum.back_to_all')
+        )}
+      </nav>,
+
+      <header className={'GarrisonServerPage-head' + (stale ? ' GarrisonServerPage-head--stale' : '')} key="head">
+        <span className="GarrisonServerPage-mark">{serverMark(s, 48)}</span>
+
+        <div className="GarrisonServerPage-identity">
+          <h1 className="GarrisonServerPage-name">{s.name}</h1>
+          <div className="GarrisonServerPage-state">
+            <span className={`GarrisonServer-state GarrisonServer-state--${s.state}`} aria-hidden="true" />
+            {app.translator.trans(`ernestdefoe-garrison.forum.state.${s.state}`)}
+            {stale ? (
+              <span className="GarrisonServerPage-staleNote">
+                {app.translator.trans('ernestdefoe-garrison.forum.stale', {
+                  when: s.lastStatusAt ? humanTime(s.lastStatusAt) : '—',
+                })}
+              </span>
+            ) : null}
+          </div>
+        </div>
+
+        <ServerControls server={s} />
+      </header>,
+
+      this.health(s, running),
+      this.join(s),
+      this.facts(s, running),
+
+      s.canConsole ? <Console server={s} tall={true} key="console" /> : null,
+
+      /*
+       * 🚨 Backups sit BELOW the console, not above it.
+       *
+       * The order is the order somebody works in. Arriving here after an
+       * alert, the questions are "what is it doing", then "what does the log
+       * say", and only then "do I need to put yesterday's world back". Putting
+       * a Restore button above the evidence invites somebody to use it before
+       * they have read anything — and it is the one control here that cannot
+       * be taken back.
+       */
+      /*
+       * 🚨 Shown when the API SENT a backup list, not when a flag says it
+       * should be. ListServersController omits the field entirely for anybody
+       * below staff, so its presence is the permission answer, already made
+       * server-side. A second client-side rule here would be a second place
+       * for the two to disagree — and the one that loses is always the one
+       * that hides things.
+       */
+      s.backups !== undefined ? <Backups server={s} key="backups" /> : null,
+    ];
+  }
+
+  /**
+   * The same three verdicts the card shows, and for the same reasons — see
+   * ServersPage.health. Repeated rather than shared because the two differ in
+   * emphasis: here there is room to show every failing probe without burying
+   * anything, and no need to choose between the summary and the detail.
+   */
+  health(s, running) {
+    if (s.needsAttention) {
+      return (
+        <div className="GarrisonHealth GarrisonHealth--attention" key="health">
+          <strong>{app.translator.trans('ernestdefoe-garrison.forum.health.attention')}</strong>
+          <span>{app.translator.trans('ernestdefoe-garrison.forum.health.attention_detail')}</span>
+          {this.checks(s)}
+        </div>
+      );
+    }
+
+    if (running && s.health === 'unready') {
+      return (
+        <div className="GarrisonHealth GarrisonHealth--unready" key="health">
+          <strong>{app.translator.trans('ernestdefoe-garrison.forum.health.unready')}</strong>
+          {s.healthSummary ? <span>{s.healthSummary}</span> : null}
+          {this.checks(s)}
+        </div>
+      );
+    }
+
+    if (running && (s.health === 'unknown' || !s.health)) {
+      return (
+        <p className="GarrisonHealth GarrisonHealth--unknown" key="health">
+          {app.translator.trans('ernestdefoe-garrison.forum.health.unchecked')}
+        </p>
+      );
+    }
+
+    return null;
+  }
+
+  checks(s) {
+    if (!s.healthChecks || !s.healthChecks.length) return null;
+
+    return (
+      <ul className="GarrisonHealth-checks">
+        {s.healthChecks.map((c, i) => (
+          <li key={i}>
+            <span className="GarrisonHealth-checkName">{c.name}</span>
+            {c.detail ? <span className="GarrisonHealth-checkDetail">{c.detail}</span> : null}
+          </li>
+        ))}
+      </ul>
+    );
+  }
+
+  join(s) {
+    if (!s.joinAddress && !s.joinCode && !s.joinPassword) return null;
+
+    return (
+      <div className="GarrisonServerPage-join" key="join">
+        <h3>{app.translator.trans('ernestdefoe-garrison.forum.join')}</h3>
+        <dl>
+          {s.joinAddress ? this.pair('join_address', <code>{s.joinAddress}</code>) : null}
+          {s.joinPassword ? this.pair('join_password', <code>{s.joinPassword}</code>) : null}
+          {s.joinCode ? this.pair('join_code_label', <code>{s.joinCode}</code>) : null}
+        </dl>
+      </div>
+    );
+  }
+
+  /**
+   * 🚨 Every fact omitted entirely when unknown, and CPU/memory omitted while
+   * stopped — the card's rule, for the card's reason. The last sample taken
+   * from a server that is now down is a memory, and rendering "0% / 3.4 MiB"
+   * states something untrue with the same confidence as everything beside it.
+   */
+  facts(s, running) {
+    return (
+      <dl className="GarrisonServerPage-facts" key="facts">
+        {this.fact('players', running && s.playersOnline != null ? (s.playersMax ? `${s.playersOnline}/${s.playersMax}` : String(s.playersOnline)) : null)}
+        {this.fact('cpu', running && s.cpuPercent != null ? `${s.cpuPercent}%` : null)}
+        {this.fact('memory', running && s.memoryBytes != null ? bytes(s.memoryBytes) + (s.statsApproximate ? ' ≈' : '') : null)}
+        {this.fact('uptime', running && s.runningSince ? humanTime(s.runningSince) : null)}
+        {this.fact('driver', s.driver)}
+        {this.fact('game', s.game)}
+      </dl>
+    );
+  }
+
+  fact(key, value) {
+    if (value === null || value === undefined || value === '') return null;
+
+    return [
+      <dt key={key + '-t'}>{app.translator.trans(`ernestdefoe-garrison.forum.fact.${key}`)}</dt>,
+      <dd key={key + '-d'}>{value}</dd>,
+    ];
+  }
+
+  pair(key, value) {
+    return [
+      <dt key={key + '-t'}>{app.translator.trans(`ernestdefoe-garrison.forum.${key}`)}</dt>,
+      <dd key={key + '-d'}>{value}</dd>,
+    ];
+  }
+}

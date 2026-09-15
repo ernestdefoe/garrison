@@ -459,7 +459,51 @@ func (a *Agent) StatusAll(ctx context.Context) []protocol.Status {
 			return lines, err
 		})
 
+		st.Backups = backupsFor(s)
+
 		out = append(out, st)
 	}
+	return out
+}
+
+// MaxBackupsShipped bounds how many archives ride along with a status report.
+//
+// 🚨 Bounded for the same reason console output is. A server configured to keep
+// every backup forever accumulates thousands of files, and an unbounded list
+// would grow the poll body without limit until the request times out — taking
+// every OTHER server's status down with it, because they share the poll. The
+// most recent handful is what an operator restores from; the rest is history
+// they would go to the host for anyway.
+const MaxBackupsShipped = 25
+
+// backupsFor lists a server's archives, newest first, for the status report.
+//
+// 🚨 Every failure here is SILENT ON PURPOSE, and this is the one place in the
+// agent where that is right. A server with no backup paths configured is the
+// normal case, not an error; an unreadable directory is worth knowing about but
+// is not worth failing a status report over. If listing backups could fail a
+// poll, one misconfigured server would stop the forum hearing about the state
+// or health of every other server on the host — trading the feature this
+// product exists for against a convenience panel.
+func backupsFor(s driver.Server) []protocol.Backup {
+	cfg, err := backupConfig(s)
+	if err != nil {
+		return nil
+	}
+
+	list, err := backup.List(cfg)
+	if err != nil || len(list) == 0 {
+		return nil
+	}
+
+	if len(list) > MaxBackupsShipped {
+		list = list[:MaxBackupsShipped]
+	}
+
+	out := make([]protocol.Backup, 0, len(list))
+	for _, b := range list {
+		out = append(out, protocol.Backup{ID: b.ID, Size: b.Size, At: b.At, Safety: b.Safety})
+	}
+
 	return out
 }

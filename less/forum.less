@@ -422,3 +422,211 @@
   gap: 8px;
   margin-top: 8px;
 }
+
+/*
+ * The per-server page.
+ *
+ * 🚨 Its own block rather than reusing the card's, because the two have
+ * different jobs: a card is scanned in a list of eleven, a page is read by one
+ * person who arrived from an alert. Sharing the classes would mean every
+ * tweak to one silently restyling the other.
+ */
+.GarrisonServerPage-back {
+  margin-bottom: 8px;
+}
+
+.GarrisonServerPage-head {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.GarrisonServerPage-identity {
+  /* Takes the slack so the controls sit hard right, and shrinks before the
+     mark or the buttons do — a name can wrap, a button cannot. */
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+.GarrisonServerPage-name {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.GarrisonServerPage-state {
+  align-items: center;
+  color: var(--muted-color);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.GarrisonServerPage-staleNote {
+  font-style: italic;
+}
+
+.GarrisonServerPage-facts,
+.GarrisonServerPage-join dl {
+  display: grid;
+  gap: 4px 16px;
+  grid-template-columns: auto 1fr;
+  margin: 0 0 16px;
+
+  dt {
+    color: var(--muted-color);
+    font-weight: normal;
+  }
+
+  dd {
+    margin: 0;
+  }
+}
+
+.GarrisonServerPage-join {
+  h3 {
+    font-size: 15px;
+    margin: 0 0 6px;
+  }
+}
+
+.GarrisonServerPage-missing {
+  color: var(--muted-color);
+  padding: 24px 0;
+}
+
+/* A console somebody came to READ, not to glance at. */
+.GarrisonConsole--tall .GarrisonConsole-out {
+  height: 420px;
+}
+
+@media @phone {
+  /* 🚨 Not 420px on a phone: that is most of the screen, and the controls and
+     backups panel below it would be off it entirely. */
+  .GarrisonConsole--tall .GarrisonConsole-out {
+    height: 240px;
+  }
+}
+
+/*
+ * Backups.
+ */
+.GarrisonBackups {
+  margin-top: 20px;
+}
+
+.GarrisonBackups-head {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin-bottom: 10px;
+
+  h3 {
+    font-size: 15px;
+    margin: 0;
+  }
+}
+
+.GarrisonBackups-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.GarrisonBackups-item {
+  align-items: center;
+  border-top: 1px solid var(--control-bg);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  padding: 8px 0;
+}
+
+.GarrisonBackups-when {
+  align-items: center;
+  display: flex;
+  flex: 1 1 200px;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+
+.GarrisonBackups-tag {
+  background: var(--control-bg);
+  border-radius: 10px;
+  color: var(--muted-color);
+  font-size: 11px;
+  padding: 1px 8px;
+}
+
+.GarrisonBackups-size {
+  color: var(--muted-color);
+  font-variant-numeric: tabular-nums;
+}
+
+.GarrisonBackups-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.GarrisonBackups-delete {
+  color: var(--alert-error-color, #d14848);
+}
+
+/*
+ * 🚨 The confirmation takes the whole row rather than sitting inside the
+ * actions column. It carries two sentences, and squeezing them into a button's
+ * worth of width is how a warning becomes something people click past.
+ */
+.GarrisonBackups-confirm {
+  align-items: center;
+  display: flex;
+  flex-basis: 100%;
+  flex-wrap: wrap;
+  gap: 8px;
+
+  p {
+    flex: 1 1 240px;
+    margin: 0;
+  }
+}
+
+.GarrisonBackups-empty {
+  color: var(--muted-color);
+}
+
+.GarrisonBackups-outcome {
+  border-inline-start: 3px solid var(--muted-color);
+  margin-bottom: 10px;
+  padding: 6px 10px;
+
+  strong {
+    display: block;
+  }
+}
+
+.GarrisonBackups-outcome--ok {
+  border-inline-start-color: var(--success-color, #6bbf6b);
+}
+
+.GarrisonBackups-outcome--bad {
+  border-inline-start-color: var(--alert-error-color, #d14848);
+}
+
+.GarrisonBackups-outcomeDetail {
+  color: var(--muted-color);
+  font-size: 12px;
+}
+
+.GarrisonBackups-stopNote {
+  display: block;
+  margin-top: 4px;
+}
+
+.GarrisonBackups-step {
+  color: var(--muted-color);
+  font-style: italic;
+  margin: 0 0 8px;
+}

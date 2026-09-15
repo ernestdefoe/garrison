@@ -81,6 +81,21 @@ export function all() {
   return servers;
 }
 
+/**
+ * One server by id, or null while the first poll is still in flight.
+ *
+ * 🚨 Reads the SAME list, rather than fetching one server by id. A per-server
+ * endpoint would be the obvious thing to add for a per-server page, and it
+ * would mean two ways to read a server, gated separately — which is how one of
+ * them ends up leaking a join password to somebody the other correctly refuses.
+ * One payload, shaped once per actor, is the whole design of this store.
+ */
+export function byId(id) {
+  const n = Number(id);
+
+  return servers.find((s) => s.id === n) || null;
+}
+
 export function isLoaded() {
   return loaded;
 }
@@ -106,4 +121,44 @@ export function command(serverId, verb, params = {}) {
       setTimeout(refresh, 2000);
       return res;
     });
+}
+
+/**
+ * Wait for a queued command to finish, and say how it went.
+ *
+ * 🚨 Polling, because queueing returns "accepted" and nothing more. The agent
+ * has up to a poll window to pick a command up, so a UI that treated 202 as
+ * success would tell somebody their world had been restored at the moment
+ * nothing had yet happened. For a restore — the one action here that cannot be
+ * undone — that is the difference between a panel that reports and one that
+ * guesses.
+ *
+ * Gives up after `attempts`, and a timeout resolves rather than rejects: the
+ * command may well still succeed, and "we stopped watching" is a different and
+ * more honest thing to say than "it failed".
+ */
+export function awaitCommand(id, { attempts = 45, everyMs = 2000 } = {}) {
+  let left = attempts;
+
+  return new Promise((resolve) => {
+    const tick = () => {
+      app
+        .request({ method: 'GET', url: app.forum.attribute('apiUrl') + `/garrison/commands/${id}` })
+        .then((res) => {
+          const c = (res && res.data) || {};
+
+          if (c.status === 'done' || c.status === 'failed' || c.status === 'expired') {
+            refresh();
+            return resolve(c);
+          }
+
+          if (--left <= 0) return resolve({ status: 'waiting' });
+
+          setTimeout(tick, everyMs);
+        })
+        .catch(() => resolve({ status: 'unknown' }));
+    };
+
+    setTimeout(tick, everyMs);
+  });
 }

@@ -238,9 +238,69 @@ class Gateway
                 : null;
         }
 
+        /**
+         * 🚨 Validated here, not trusted. The agent generates these ids and
+         * refuses anything that does not match the pattern it generates — but
+         * this row is what the forum will later hand BACK as the id to restore
+         * or delete, so the forum checks the shape too.
+         *
+         * Not because the agent's check is doubted: because the two checks
+         * fail differently. A malformed id that gets stored here becomes a
+         * button in somebody's browser that can only ever error, and the
+         * operator reading "restore failed" has no way to tell a broken
+         * archive from a broken panel. Refusing it at the door means the
+         * button is never drawn.
+         *
+         * `is_array` on the whole field first: a report without backups (every
+         * server that has none configured, which is most of them) must not
+         * overwrite anything, and `[]` is a real answer meaning "none left"
+         * that MUST overwrite — somebody just deleted the last one.
+         */
+        if (isset($report['backups']) && is_array($report['backups'])) {
+            $server->backups = json_encode($this->validBackups($report['backups']));
+        }
+
         $server->last_status_at = Carbon::now();
         $server->updated_at = Carbon::now();
         $server->save();
+    }
+
+    /**
+     * 🚨 The same pattern the agent generates, repeated on this side.
+     *
+     * Kept in step with internal/backup/backup.go by intent rather than by
+     * machinery — there is no way for PHP to import a Go constant. The pattern
+     * is deliberately strict: it is what stands between a backup id and an
+     * arbitrary path, on both halves of this product.
+     */
+    protected const BACKUP_ID = '/^[a-z0-9][a-z0-9_-]{0,63}-\d{8}-\d{6}-[a-z0-9]{4}(-safety)?\.tar\.gz$/';
+
+    /**
+     * @param array<int, mixed> $reported
+     * @return array<int, array{id: string, size: int, at: string, safety: bool}>
+     */
+    protected function validBackups(array $reported): array
+    {
+        $out = [];
+
+        foreach ($reported as $b) {
+            if (! is_array($b) || ! isset($b['id']) || ! is_string($b['id'])) {
+                continue;
+            }
+
+            if (! preg_match(self::BACKUP_ID, $b['id'])) {
+                continue;
+            }
+
+            $out[] = [
+                'id' => $b['id'],
+                'size' => (int) ($b['size'] ?? 0),
+                'at' => (string) ($b['at'] ?? ''),
+                'safety' => ! empty($b['safety']),
+            ];
+        }
+
+        return $out;
     }
 
     /**

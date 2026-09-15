@@ -87,8 +87,19 @@ export default class Console extends Component {
   }
 
   view() {
+    /*
+     * 🚨 A MODIFIER, not an inline height.
+     *
+     * The per-server page wants a taller console than the card does. Setting
+     * `style={{height}}` here would win against every stylesheet — including
+     * the phone-width rule that stops the console eating a whole screen — and
+     * a component that cannot be restyled from CSS is one that will look wrong
+     * on the first surface nobody thought of.
+     */
+    const tall = this.attrs.tall ? ' GarrisonConsole--tall' : '';
+
     return (
-      <div className="GarrisonConsole">
+      <div className={'GarrisonConsole' + tall}>
         <div
           className="GarrisonConsole-out"
           onscroll={(e) => {

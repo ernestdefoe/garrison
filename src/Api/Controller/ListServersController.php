@@ -105,6 +105,25 @@ class ListServersController implements RequestHandlerInterface
              */
             if ($actor->hasPermission('garrison.view') || $actor->hasPermission('garrison.manage')) {
                 $row['healthChecks'] = $server->failingChecks();
+
+                /**
+                 * 🚨 The list rides along here rather than being asked for,
+                 * because of WHEN it gets asked for.
+                 *
+                 * "Is there anything to restore?" is a question somebody asks
+                 * in the minute after something went badly wrong. A panel that
+                 * answers it by queueing a backup.list verb shows a spinner for
+                 * up to a poll window first — and shows nothing at all if the
+                 * host has just gone offline, which is one of the reasons
+                 * somebody would be asking. The agent ships the list with every
+                 * status report so this row is always already true.
+                 *
+                 * Staff only, with the failing probes, for the same reason:
+                 * filenames name the server and say how often it is backed up,
+                 * which is operational detail rather than something a player
+                 * needs.
+                 */
+                $row['backups'] = $server->backupList();
             }
 
             if ($server->joinDetailsVisibleTo($actor)) {
@@ -115,6 +134,18 @@ class ListServersController implements RequestHandlerInterface
 
             $row['canControl'] = $actor->hasPermission('garrison.control') || $actor->hasPermission('garrison.manage');
             $row['canConsole'] = $actor->hasPermission('garrison.console') || $actor->hasPermission('garrison.manage');
+
+            /**
+             * 🚨 Sent so the browser can decide what to DRAW. It is not what
+             * decides what is allowed — Dispatcher::assertPermitted does that,
+             * on every queue, server-side, and it refuses a restore from
+             * anybody without manage no matter what this flag said.
+             *
+             * Two checks of the same rule, deliberately: the server's is the
+             * gate, and this one is so a member who cannot restore is never
+             * shown a Restore button that exists only to tell them no.
+             */
+            $row['canManage'] = $actor->hasPermission('garrison.manage');
 
             return $row;
         })->values()->all();

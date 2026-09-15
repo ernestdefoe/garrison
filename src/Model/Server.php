@@ -121,6 +121,47 @@ class Server extends AbstractModel
     }
 
     /**
+     * The archives the agent last reported holding, newest first.
+     *
+     * 🚨 Shaped for the browser here rather than in the controller, so the
+     * status page and any future surface get the same list. The cap is the
+     * agent's (MaxBackupsShipped); this does not re-cap, because a shorter
+     * list here would silently hide the older half of what an operator can
+     * actually restore.
+     *
+     * @return array<int, array{id: string, size: int, at: ?string, safety: bool}>
+     */
+    public function backupList(): array
+    {
+        if (empty($this->backups)) {
+            return [];
+        }
+
+        $decoded = json_decode($this->backups, true);
+
+        if (! is_array($decoded)) {
+            return [];
+        }
+
+        $out = [];
+
+        foreach ($decoded as $b) {
+            if (! is_array($b) || empty($b['id'])) {
+                continue;
+            }
+
+            $out[] = [
+                'id' => (string) $b['id'],
+                'size' => (int) ($b['size'] ?? 0),
+                'at' => empty($b['at']) ? null : (string) $b['at'],
+                'safety' => ! empty($b['safety']),
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
      * Stale means the agent has not reported recently, so what is on screen is
      * a memory rather than a fact. Shown as such: a panel confidently
      * displaying a twenty-minute-old "running" is how an outage goes unnoticed

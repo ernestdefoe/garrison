@@ -6,6 +6,7 @@ import LinkButton from 'flarum/common/components/LinkButton';
 import { GarrisonServer } from './models';
 import ServerIncidentNotification from './components/ServerIncidentNotification';
 import ServerList from './components/ServerList';
+import ServerPage from './components/ServerPage';
 import ServersPage from './components/ServersPage';
 import registerWidgetHosts from './hosts';
 
@@ -15,6 +16,23 @@ import registerWidgetHosts from './hosts';
  */
 app.initializers.add('ernestdefoe-garrison', () => {
   app.routes.garrison = { path: '/garrison', component: ServersPage };
+
+  /*
+   * 🚨 `:id`, and deliberately not `:server`.
+   *
+   * Mithril reserves a handful of route parameter names, and a collision does
+   * not error — the page simply renders nothing, which reads as a component
+   * that was never finished. `id` is the safe, conventional choice and matches
+   * what every core Flarum route uses.
+   *
+   * 🚨 This ALSO needs registering server-side, in extend.php. Without that,
+   * clicking through from the list works — Mithril handles it — and loading
+   * the URL directly, refreshing on it, or following the link out of an alert
+   * email returns a bare 404. Which is precisely the case this page exists
+   * for: the whole point of a per-server URL is that something else links to
+   * it.
+   */
+  app.routes['garrison.server'] = { path: '/garrison/s/:id', component: ServerPage };
 
   /*
    * 🚨 Without this, the notification list throws `this.models[...] is not a

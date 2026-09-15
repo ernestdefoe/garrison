@@ -3,6 +3,9 @@ package agent
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -236,6 +239,93 @@ func TestAgentInfoReportsTheWholeVerbSet(t *testing.T) {
 	for _, v := range info.Verbs {
 		if !protocol.Known(protocol.Verb(v)) {
 			t.Errorf("agent.info advertises %q, which is not in the known set", v)
+		}
+	}
+}
+
+// 🚨 One server whose backup directory is unreadable, or which has no backup
+// paths at all, must not be able to stop the forum hearing about any OTHER
+// server on the host.
+//
+// Backups ride along with the status report, and status is the thing this whole
+// product exists to deliver. Trading it against a convenience panel — one
+// misconfigured server silencing five healthy ones — is the worst possible
+// exchange, and it is exactly what an error return from backupsFor would buy.
+func TestABrokenBackupDirectoryDoesNotBreakStatus(t *testing.T) {
+	servers := []driver.Server{
+		{ID: "no-backups", Name: "No backups", Driver: "fake"},
+		{
+			ID: "bad-backups", Name: "Bad backups", Driver: "fake",
+			BackupRoot:  filepath.Join(t.TempDir(), "gone"),
+			BackupPaths: []string{"world"},
+			BackupDir:   filepath.Join(t.TempDir(), "nope", "deeper"),
+		},
+	}
+
+	a, err := New(context.Background(), servers, driver.Set{"fake": &fakeDriver{name: "fake"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	all := a.StatusAll(context.Background())
+
+	if len(all) != 2 {
+		t.Fatalf("got %d statuses, want one per server", len(all))
+	}
+
+	for _, st := range all {
+		if st.State == "" {
+			t.Fatalf("%s reported no state at all", st.Server)
+		}
+		if len(st.Backups) != 0 {
+			t.Fatalf("%s reported backups it cannot have: %v", st.Server, st.Backups)
+		}
+	}
+}
+
+// The other half: a server that DOES have backups ships them, newest first and
+// capped, so the panel can render without a round trip.
+func TestStatusShipsBackupsNewestFirstAndCapped(t *testing.T) {
+	root := t.TempDir()
+	dir := filepath.Join(t.TempDir(), "backups")
+
+	if err := os.MkdirAll(dir, 0o750); err != nil {
+		t.Fatal(err)
+	}
+
+	// More than the cap, with distinct modification times.
+	made := MaxBackupsShipped + 5
+	for i := 0; i < made; i++ {
+		name := fmt.Sprintf("srv-2026091%d-12000%d-a%03d.tar.gz", i%10, i%10, i)
+		path := filepath.Join(dir, name)
+		if err := os.WriteFile(path, []byte("x"), 0o640); err != nil {
+			t.Fatal(err)
+		}
+		when := time.Now().Add(-time.Duration(made-i) * time.Hour)
+		if err := os.Chtimes(path, when, when); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	a, err := New(context.Background(),
+		[]driver.Server{{
+			ID: "srv", Name: "Server", Driver: "fake",
+			BackupRoot: root, BackupPaths: []string{"world"}, BackupDir: dir,
+		}},
+		driver.Set{"fake": &fakeDriver{name: "fake"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	got := a.StatusAll(context.Background())[0].Backups
+
+	if len(got) != MaxBackupsShipped {
+		t.Fatalf("shipped %d backups, cap is %d", len(got), MaxBackupsShipped)
+	}
+
+	for i := 1; i < len(got); i++ {
+		if got[i].At.After(got[i-1].At) {
+			t.Fatalf("backup %d is newer than the one before it — the list is not newest-first", i)
 		}
 	}
 }

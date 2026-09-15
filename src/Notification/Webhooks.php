@@ -3,6 +3,8 @@
 namespace ErnestDefoe\Garrison\Notification;
 
 use ErnestDefoe\Garrison\Model\Server;
+use Flarum\Http\UrlGenerator;
+use Flarum\Locale\TranslatorInterface;
 use Flarum\Settings\SettingsRepositoryInterface;
 use Psr\Log\LoggerInterface;
 
@@ -18,7 +20,9 @@ class Webhooks
 {
     public function __construct(
         protected SettingsRepositoryInterface $settings,
-        protected LoggerInterface $log
+        protected LoggerInterface $log,
+        protected TranslatorInterface $translator,
+        protected UrlGenerator $url
     ) {
     }
 
@@ -51,17 +55,45 @@ class Webhooks
         $this->post($url, $body);
     }
 
+    /**
+     * 🚨 TRANSLATED, not built from English string literals here.
+     *
+     * These lines used to be four hardcoded sentences in this method, which
+     * made a German community's Discord channel the one place in the whole
+     * product that spoke English at them — and the place they would see most
+     * often, because it is the one that reaches a phone.
+     *
+     * The FORUM's locale, not a user's: a webhook has no recipient to have a
+     * preference. `trans()` without an actor uses the default, which is the
+     * right answer and also the only available one.
+     */
     protected function line(Server $server, string $state, ?string $summary): string
     {
-        return match ($state) {
-            'unready' => '⚠️ **' . $server->name . '** is running but players cannot join'
-                . ($summary ? ' — ' . $summary : ''),
-            'down' => '🔴 **' . $server->name . '** has stopped',
-            'recovered' => '✅ **' . $server->name . '** is back',
-            'abandoned' => '🚨 **' . $server->name . '** did not come back after repeated restarts. '
-                . 'Automatic restarts have stopped and it needs a person.',
-            default => '**' . $server->name . '**: ' . $state,
+        $key = match ($state) {
+            'unready', 'down', 'recovered', 'abandoned' => $state,
+            // 🚨 A closed set with a fallback, for the third time in this
+            // codebase. An unexpected state must never compose a translation
+            // key that does not exist — here that would post a raw key into
+            // somebody's Discord, where it cannot be edited afterwards.
+            default => 'unknown',
         };
+
+        return $this->translator->trans('ernestdefoe-garrison.webhook.' . $key, [
+            'name' => $server->name,
+            'state' => $state,
+
+            /*
+             * 🚨 A LINK, because the whole point of this channel is that it
+             * reaches somebody who is not looking at the forum. Telling them a
+             * server is down and leaving them to go and find it is most of the
+             * delay this feature exists to remove — and it goes to the
+             * server's own page, not the list, for the same reason the alert
+             * emails do.
+             */
+            'url' => $this->url->to('forum')->route('garrison.server', ['id' => $server->id]),
+        ]) . ($summary && in_array($state, ['unready', 'down'], true)
+            ? ' — ' . $summary
+            : '');
     }
 
     protected function post(string $url, array $body): void

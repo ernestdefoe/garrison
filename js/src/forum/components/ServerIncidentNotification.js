@@ -28,8 +28,24 @@ export default class ServerIncidentNotification extends Notification {
     return 'fas fa-triangle-exclamation';
   }
 
+  /**
+   * 🚨 Straight to the server the alert is about, not to the list.
+   *
+   * An alert that says "Shattered Pact stopped accepting players" and lands
+   * somebody on a page of eleven servers has handed them a search task at the
+   * moment they are least able to do one. The subject id is the server's — it
+   * is what the blueprint reports as its subject — so the link is exact.
+   *
+   * Falls back to the list if the subject did not come through, which happens
+   * for a notification whose server has since been deleted. A dead link would
+   * be the worse answer there: the list at least explains itself.
+   */
   href() {
-    return app.route('garrison');
+    const subject = this.attrs.notification.subject();
+
+    return subject
+      ? app.route('garrison.server', { id: subject.id() })
+      : app.route('garrison');
   }
 
   content() {

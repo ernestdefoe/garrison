@@ -11,7 +11,7 @@
 <x-slot:body>
 {!! $translator->trans('ernestdefoe-garrison.email.server_incident.body.' . $blueprint->key(), [
 'name' => $blueprint->server->name,
-'url' => $url->to('forum')->route('garrison'),
+'url' => $url->to('forum')->route('garrison.server', ['id' => $blueprint->server->id]),
 ]) !!}
 @if ($blueprint->summary)
 

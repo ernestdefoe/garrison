@@ -7,6 +7,7 @@ import humanTime from 'flarum/common/helpers/humanTime';
 
 import Console from './Console';
 import ServerControls from './ServerControls';
+import { bytes } from '../format';
 import { serverMark } from '../marks';
 import { all, isLoaded, lastError, subscribe } from '../store';
 
@@ -86,7 +87,17 @@ export default class ServersPage extends Page {
         <div className="GarrisonCard-head">
           <span className={`GarrisonServer-state GarrisonServer-state--${s.state}`} aria-hidden="true" />
           <span className="GarrisonCard-mark">{serverMark(s, 26)}</span>
-          <h3 className="GarrisonCard-name">{s.name}</h3>
+          {/*
+            🚨 The name is the link, rather than a "Details" button beside it.
+            The name is the thing somebody's eye is already on and the thing
+            they would try to click; adding a separate control would put the
+            obvious target next to the working one.
+          */}
+          <h3 className="GarrisonCard-name">
+            <a href={app.route('garrison.server', { id: s.id })} config={m.route.link}>
+              {s.name}
+            </a>
+          </h3>
           <span className="GarrisonCard-state">
             {app.translator.trans(`ernestdefoe-garrison.forum.state.${s.state}`)}
           </span>
@@ -242,20 +253,3 @@ export default class ServersPage extends Page {
   }
 }
 
-/**
- * 🚨 Binary units, because that is what every one of these sources reports.
- * Docker says GiB, cgroup counts pages, /proc counts pages. Dividing by 1000
- * would show a number that disagrees with `docker stats` on the same machine,
- * and the operator would believe the panel over their own eyes exactly once.
- */
-function bytes(n) {
-  const units = ['B', 'KiB', 'MiB', 'GiB', 'TiB'];
-  let i = 0;
-
-  while (n >= 1024 && i < units.length - 1) {
-    n /= 1024;
-    i++;
-  }
-
-  return (i === 0 ? n : n.toFixed(n >= 10 ? 0 : 1)) + ' ' + units[i];
-}

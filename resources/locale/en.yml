@@ -51,6 +51,16 @@ ernestdefoe-garrison:
           {url}
         finding: "What the health check saw: {finding}"
 
+  # 🚨 What gets posted to Discord. Translated like everything else: this is
+  # the message that reaches a phone, so it is the one a community is most
+  # likely to see, and it used to be the only hardcoded English in the product.
+  webhook:
+    unready: "⚠️ **{name}** is running but players cannot join. {url}"
+    down: "🔴 **{name}** has stopped. {url}"
+    recovered: "✅ **{name}** is back. {url}"
+    abandoned: "🚨 **{name}** did not come back after repeated restarts. Automatic restarts have stopped and it needs a person. {url}"
+    unknown: "**{name}**: {state}. {url}"
+
   forum:
     # The notification component reads these. The state is mapped to a key
     # through a closed switch rather than interpolated, so an unexpected state
@@ -115,6 +125,59 @@ ernestdefoe-garrison:
       memory: Memory
       uptime: Started
       driver: Runs as
+      game: Game
+
+    # The per-server page.
+    back_to_all: All servers
+    server_not_here: That server is not here. It may have been removed, or its host may not be paired any more.
+    join_address: Address
+    join_password: Password
+    join_code_label: Join code
+
+    backups:
+      title: Backups
+      create: Back up now
+      none: No backups yet. One will appear here after the next backup runs.
+      # 🚨 Said plainly, because this is the label on the one archive somebody
+      # is most likely to want and least likely to recognise — taken
+      # automatically, seconds before a world was overwritten.
+      safety: Taken automatically before a restore
+      restore: Restore
+      delete: Delete
+      cancel: Cancel
+      # 🚨 The second sentence is the reason somebody can press the button at
+      # all. Without it this is "overwrite your world, are you sure?", which is
+      # a question nobody can answer confidently.
+      confirm_restore: This replaces what is on the server right now with this backup. A copy of the current state is taken first, so this can be undone.
+      # 🚨 Said before the click, not after. The agent refuses to restore into
+      # a running server — correctly, because writing a world file under a live
+      # process corrupts it — and a panel that only reports that afterwards has
+      # left somebody stranded on the control they were most nervous about.
+      confirm_restore_stops: This server is running, so it will be stopped first. It is left stopped afterwards, so you can check the restore before letting players back in.
+      confirm_restore_do: Yes, restore it
+      confirm_restore_do_stopping: Stop it and restore
+      confirm_delete: This deletes the backup from the host. It cannot be undone.
+      confirm_delete_do: Yes, delete it
+      step:
+        stopping: Stopping the server…
+        restoring: Restoring…
+
+      outcome:
+        done_create: Backup taken.
+        done_restore: Restored. A copy of the previous state was saved first.
+        done_delete: Backup deleted.
+        failed_create: The backup did not run.
+        failed_restore: Nothing was restored.
+        failed_delete: The backup was not deleted.
+        # A stop that failed, so the restore was never attempted.
+        done_stop: Server stopped.
+        failed_stop: The server would not stop, so nothing was restored.
+        waiting_stop: Still stopping.
+        # 🚨 "We stopped watching" is a different and more honest thing to say
+        # than "it failed" — the command may still be running on the host.
+        waiting_create: Still working. The backup is running on the host.
+        waiting_restore: Still working. The restore is running on the host.
+        waiting_delete: Still working.
 
   admin:
     title: Garrison
