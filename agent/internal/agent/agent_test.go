@@ -508,14 +508,31 @@ func TestABadPlayerPatternDoesNotStopTheAgent(t *testing.T) {
 		t.Fatal("a server went missing")
 	}
 
+	/*
+	 * 🚨 Reported by the per-server CHECK, not in the driver list.
+	 *
+	 * It used to be added to `unavailable`, and --check then printed the same
+	 * mistake twice: once in the host-wide block where it read as
+	 * informational, and once against the server where it read as a fault. Two
+	 * lines for one problem, disagreeing about how serious it is. The check is
+	 * where it belongs, because that is the only place with room to say which
+	 * server and what to do.
+	 */
+	if len(unavailable) != 0 {
+		t.Errorf("a per-server feature fault was reported as a missing driver: %v", unavailable)
+	}
+
 	var mentioned bool
-	for _, u := range unavailable {
-		if strings.Contains(u, "players for broken") {
+
+	for _, f := range Check(context.Background(), []driver.Server{
+		{ID: "broken", Name: "Broken", Driver: "fake", Players: players.Config{Join: `(?P<name>[`, Leave: `x`}},
+	}, []string{"fake"}, nil) {
+		if f.Server == "broken" && f.Bad && strings.Contains(f.Text, "players") {
 			mentioned = true
 		}
 	}
 
 	if !mentioned {
-		t.Fatalf("the bad pattern was not reported: %v", unavailable)
+		t.Fatal("the bad pattern was not reported against the server it belongs to")
 	}
 }

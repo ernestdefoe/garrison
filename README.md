@@ -86,8 +86,35 @@ not merely by passing:
     # on the game host
     garrison-agent --config /etc/garrison/agent.json --check
 
-`--check` validates the config and reports what the host can actually do,
-rather than letting the first click be where you find out Docker is missing.
+🚨 **`--check` is the whole preflight, and it exits non-zero.** Put it at the
+end of an install script or a CI step: every mistake below is one somebody makes
+while writing a JSON file by hand, all of them are cheap to catch before
+anything runs, and all of them are expensive to discover any other way.
+
+    valheim
+      ok   driver docker, stop grace 2m0s
+
+    fakegame
+      ok   driver process, stop grace 10s
+      BAD  backup path "mods" does not exist under backupRoot
+      ok   config "props": 4 setting(s), 3 editable
+      BAD  config "props" allows the key "veiw-distance", which is not in the file
+      BAD  players: no player preset called "minecarft" — try one of ark,
+           factorio, minecraft, rust, terraria, valheim
+      BAD  off-site: the bucket could not be listed: 403 Forbidden:
+           SignatureDoesNotMatch: The request signature we calculated does not
+           match the signature you provided.
+
+    2 server(s) configured, 4 problem(s)
+
+It reports **every** fault rather than stopping at the first, because somebody
+fixing a config wants the list rather than a game of whack-a-mole with a restart
+between each round.
+
+🚨 **It reaches the network on purpose.** Checking that off-site credentials are
+merely *present* is the check that passes for a typo'd secret key and lets
+somebody believe their backups are safe for a year. Listing the bucket is the
+only answer that means anything, and it is one request.
 
 ## Configuring a server on the host
 

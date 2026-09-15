@@ -58,11 +58,17 @@ func main() {
 	}
 
 	if *check {
-		fmt.Printf("config OK: %d server(s)\n", len(cfg.Servers))
-		fmt.Printf("drivers available: %v\n", ag.Drivers())
-		for _, s := range cfg.Servers {
-			fmt.Printf("  %-16s driver=%-8s grace=%s\n", s.ID, s.Driver, s.Grace())
+		/*
+		 * 🚨 Exits NON-ZERO when something is wrong, so this can be the last
+		 * line of an install script or a CI step. A check that always succeeds
+		 * is a check nobody wires into anything, and then it only runs when
+		 * somebody already suspects a problem — which is far too late for the
+		 * things it catches.
+		 */
+		if !report(ctx, cfg.Servers, ag) {
+			os.Exit(1)
 		}
+
 		return
 	}
 
@@ -93,4 +99,50 @@ func main() {
 		os.Exit(1)
 	}
 	log.Info("stopped")
+}
+
+/*
+report prints the preflight findings, grouped by server, and says whether the
+configuration is usable.
+
+🚨 Grouped and printed in full rather than stopping at the first fault. An
+operator fixing a hand-written JSON file wants the list — stopping at the first
+problem turns one editing session into a game of whack-a-mole with an agent
+restart between each round.
+*/
+func report(ctx context.Context, servers []driver.Server, ag *agent.Agent) bool {
+	findings := agent.Check(ctx, servers, ag.Drivers(), ag.Unavailable())
+
+	byServer := map[string][]agent.Finding{}
+	var order []string
+
+	for _, f := range findings {
+		if _, seen := byServer[f.Server]; !seen {
+			order = append(order, f.Server)
+		}
+
+		byServer[f.Server] = append(byServer[f.Server], f)
+	}
+
+	bad := 0
+
+	for _, name := range order {
+		if name != "" {
+			fmt.Printf("\n%s\n", name)
+		}
+
+		for _, f := range byServer[name] {
+			mark := "  ok  "
+			if f.Bad {
+				mark = "  BAD "
+				bad++
+			}
+
+			fmt.Printf("%s %s\n", mark, f.Text)
+		}
+	}
+
+	fmt.Printf("\n%d server(s) configured, %d problem(s)\n", len(servers), bad)
+
+	return bad == 0
 }

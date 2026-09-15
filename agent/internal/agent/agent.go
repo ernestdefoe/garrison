@@ -39,6 +39,25 @@ type Agent struct {
 	// Who is in each game, read from its log. Nil for a server whose operator
 	// did not configure how to read them.
 	watchers map[string]*players.Watcher
+
+	/*
+	 * Which DRIVERS this host cannot run, kept so `--check` can report them.
+	 *
+	 * 🚨 Remembered rather than only returned from New(): the preflight report
+	 * runs after construction, and a missing Docker is exactly what an operator
+	 * running --check needs told. Returning it once and discarding it meant the
+	 * one caller who most needed it could not reach it.
+	 *
+	 * Drivers only. Per-server features — a bad player pattern, an unreadable
+	 * config file — are reported by the per-server check, which has room to say
+	 * which server and what to do about it.
+	 */
+	unavailable []string
+}
+
+// Unavailable lists the drivers this host cannot run.
+func (a *Agent) Unavailable() []string {
+	return a.unavailable
 }
 
 /*
@@ -77,10 +96,18 @@ func New(ctx context.Context, servers []driver.Server, candidates driver.Set) (*
 		 * mistake is reported and that server simply reports no players, which
 		 * is what a server with no configuration does anyway.
 		 */
+		/*
+		 * 🚨 NOT added to `unavailable`, which is about DRIVERS.
+		 *
+		 * It was, and the result was the same mistake reported twice in
+		 * --check: once in the host-wide block where it read as informational,
+		 * and once against the server where it read as a fault. Two lines for
+		 * one problem, disagreeing about how serious it is, is worse than
+		 * either alone. The per-server check re-runs players.New and reports it
+		 * properly; this only has to not crash.
+		 */
 		w, err := players.New(s.Players)
 		if err != nil {
-			unavailable = append(unavailable, fmt.Sprintf("players for %s: %v", s.ID, err))
-
 			continue
 		}
 
@@ -96,6 +123,8 @@ func New(ctx context.Context, servers []driver.Server, candidates driver.Set) (*
 		}
 		a.drivers[name] = d
 	}
+	a.unavailable = unavailable
+
 	return a, unavailable
 }
 
