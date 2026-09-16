@@ -294,15 +294,54 @@ func TestAHandWrittenTemplateOverridesTheCatalogue(t *testing.T) {
 }
 
 func TestCatalogRejectsAGameItDoesNotKnow(t *testing.T) {
-	// Minecraft is not installable from Steam, so it must be refused at load
-	// rather than produce a template that fails after a long download.
+	/*
+	 * Terraria has no permanent "latest" download to resolve against, so it is
+	 * deliberately not in the catalogue. Naming it must fail at LOAD, with a
+	 * message listing what Garrison does know — not produce a template that
+	 * fails later, after a download, on a host somebody is waiting at.
+	 */
 	path := write(t, `{
 		"forumUrl": "https://example.test", "token": "t", "servers": [],
-		"catalog": { "installRoot": "/srv/games", "games": ["minecraft"] }
+		"catalog": { "installRoot": "/srv/games", "games": ["terraria"] }
 	}`)
 
 	if _, err := Load(path); err == nil {
 		t.Fatal("an unknown catalogue game must fail at load")
+	}
+}
+
+/*
+🚨 Minecraft and Factorio come from their publishers rather than Steam, and the
+catalogue must expand them the same way as everything else — the whole point is
+that nothing downstream can tell where a template came from.
+*/
+func TestNonSteamGamesExpandToo(t *testing.T) {
+	path := write(t, `{
+		"forumUrl": "https://example.test", "token": "t", "servers": [],
+		"catalog": { "installRoot": "/srv/games", "games": ["minecraft", "factorio"] }
+	}`)
+
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	mc, err := provision.Find(cfg.Templates, "minecraft")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if mc.SteamApp != 0 {
+		t.Errorf("minecraft should have no Steam app id, got %d", mc.SteamApp)
+	}
+	if mc.Download == "" {
+		t.Error("minecraft has no download, so nothing could install it")
+	}
+	if mc.NeedsBinary != "java" {
+		t.Errorf("minecraft needs java declared up front, got %q", mc.NeedsBinary)
+	}
+	if mc.InstallRoot != "/srv/games/minecraft" {
+		t.Errorf("install root is %q", mc.InstallRoot)
 	}
 }
 

@@ -22,15 +22,20 @@ download, the flag that stops a headless server trying to open a window. Those
 are facts about a game, not decisions about a host, and making every operator
 rediscover them was the reason provisioning went unused.
 
-🚨 STEAM ONLY, and the omissions are honest ones.
+🚨 NOT every game comes from Steam, and the two that do not are the two people
+ask for first.
 
-Minecraft, Factorio and Terraria are not here. None of them installs through
-SteamCMD — Minecraft is a jar from Mojang, Factorio a tarball from its own site,
-Terraria a zip — and the installer in this package downloads from Steam and
-nothing else. Listing them with a zero app id would produce a template that
-looks installable, fails at install time, and teaches an operator that the
-feature is broken. Garrison still RUNS all three perfectly well; it just cannot
-fetch them for you, and says so rather than implying otherwise.
+Minecraft is a jar from Mojang and Factorio a tarball from its own site, so both
+are fetched over HTTPS instead — see fetch.go, which is deliberately narrower
+than SteamCMD because a URL can name anywhere. Neither has a stable address:
+Mojang publishes a different URL for every release, so the catalogue stores a
+TOKEN that is resolved against the publisher's own manifest at install time
+rather than a link that would rot.
+
+🚨 Terraria is still absent. Its downloads are versioned with no permanent
+"latest" alias to resolve against, so anything written here would be a specific
+old version pretending to be current. Garrison runs it perfectly well once it is
+on the host; write a template pointing at what you installed.
 */
 
 // Preset is a catalogue entry: everything about a game that is true wherever it
@@ -43,6 +48,12 @@ type Preset struct {
 	Label string
 
 	SteamApp int
+
+	// For games Steam does not carry. See Template.Download.
+	Download    string
+	Archive     string
+	DownloadAs  string
+	NeedsBinary string
 
 	// Command is relative to the server's own directory.
 	Command string
@@ -130,6 +141,37 @@ var presets = []Preset{
 		BackupPaths:      []string{"Pal/Saved"},
 	},
 	{
+		Game:  "minecraft",
+		Label: "Minecraft (Java)",
+		/*
+		 * 🚨 A token, not a URL. Mojang publishes a new server jar address for
+		 * every release; a literal link here would install whatever was current
+		 * the day it was typed and silently stay there for ever.
+		 */
+		Download:   "mojang:release",
+		DownloadAs: "server.jar",
+		// 🚨 Garrison does not install a JRE, and says so before downloading
+		// rather than after a start failure.
+		NeedsBinary:      "java",
+		Command:          "java -Xmx2G -jar server.jar nogui",
+		StopCommand:      "stop",
+		StopGraceSeconds: 60,
+		// 🚨 The world, not the jar. The jar is a download away; the world is
+		// not, and a backup of the whole directory buys nothing but minutes.
+		BackupPaths: []string{"world"},
+		Players:     players.Config{Preset: "minecraft"},
+	},
+	{
+		Game:             "factorio",
+		Label:            "Factorio (headless)",
+		Download:         "factorio:stable",
+		Archive:          "tar.xz",
+		Command:          "factorio/bin/x64/factorio --start-server-load-latest --server-settings factorio/data/server-settings.json",
+		StopGraceSeconds: 45,
+		BackupPaths:      []string{"factorio/saves"},
+		Players:          players.Config{Preset: "factorio"},
+	},
+	{
 		Game:             "satisfactory",
 		Label:            "Satisfactory",
 		SteamApp:         1690800,
@@ -178,6 +220,10 @@ func (p Preset) Expand(id, installRoot string) Template {
 		Driver:           "process",
 		Game:             p.Game,
 		SteamApp:         p.SteamApp,
+		Download:         p.Download,
+		Archive:          p.Archive,
+		DownloadAs:       p.DownloadAs,
+		NeedsBinary:      p.NeedsBinary,
 		InstallRoot:      filepath.Clean(installRoot),
 		Command:          p.Command,
 		StopCommand:      p.StopCommand,

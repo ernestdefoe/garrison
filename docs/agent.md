@@ -221,6 +221,8 @@ same picker in the forum. Garrison currently knows:
 | `projectzomboid` | Project Zomboid |
 | `palworld` | Palworld |
 | `satisfactory` | Satisfactory |
+| `minecraft` | Minecraft (Java) — needs a JRE on the host |
+| `factorio` | Factorio (headless) — needs `xz` to unpack |
 
 🚨 **This does not widen what the agent may install.** You still name every game
 and still choose the directory. What it removes is the research — the app id,
@@ -228,13 +230,23 @@ where the binary sits inside the download, the flag that stops a headless server
 trying to open a window. Those are facts about a game, not decisions about your
 host.
 
-🚨 **Minecraft, Factorio and Terraria are deliberately absent.** None of them
-installs through SteamCMD — Minecraft is a jar from Mojang, Factorio a tarball
-from its own site, Terraria a zip — and this installer downloads from Steam and
-nothing else. Listing them would produce a template that looks installable and
-then fails after a multi-gigabyte download. Garrison runs all three perfectly
-well once they are on the host; write them out as templates below, pointing
-`command` at what you installed.
+**Minecraft and Factorio do not come from Steam**, so Garrison fetches them over
+HTTPS from their publishers instead. Neither has a stable address — Mojang
+publishes a different URL for every release — so the catalogue stores a token
+that is resolved against the publisher's own manifest **at install time**, and
+you always get the current version rather than whatever was current when this
+was written.
+
+🚨 **Minecraft needs a JRE**, which Garrison does not install. It checks before
+downloading and says so, rather than letting you pay for a download and then
+discover it at the first start. `apt-get install default-jre-headless` is
+usually enough. Factorio ships `.tar.xz`, so the host needs `xz`.
+
+🚨 **Terraria is still absent.** Its downloads are versioned with no permanent
+"latest" alias, so anything written here would be one specific old version
+pretending to be current. Garrison runs it perfectly well once it is on the
+host — write it out as a template below, pointing `command` at what you
+installed.
 
 Writing a template out by hand **overrides** the catalogue entry with the same
 id, which is how you change a launch flag without losing the rest.

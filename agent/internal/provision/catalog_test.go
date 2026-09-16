@@ -22,9 +22,22 @@ func TestEveryPresetCanActuallyBeInstalled(t *testing.T) {
 		if p.Label == "" {
 			t.Errorf("%s: no label, so the picker would show a blank row", p.Game)
 		}
-		if p.SteamApp <= 0 {
-			t.Errorf("%s: no Steam app id — the installer downloads from Steam and nothing else, "+
-				"so this template would look installable and then fail", p.Game)
+		/*
+		 * 🚨 Every preset must be installable by SOME means. A preset with
+		 * neither a Steam app id nor a download is one the picker offers and
+		 * the installer cannot act on — it would create an empty directory,
+		 * report success, and leave somebody wondering where their server is.
+		 */
+		if p.SteamApp <= 0 && p.Download == "" {
+			t.Errorf("%s: neither a Steam app id nor a download, so nothing can install it", p.Game)
+		}
+		if p.SteamApp > 0 && p.Download != "" {
+			t.Errorf("%s: has both a Steam app id and a download; which one wins is not obvious", p.Game)
+		}
+		// A download that is not an archive must say what to call the file, or
+		// it lands as "download" and no command will find it.
+		if p.Download != "" && p.Archive == "" && p.DownloadAs == "" {
+			t.Errorf("%s: a plain download needs downloadAs, or the file has no usable name", p.Game)
 		}
 		if p.Command == "" {
 			t.Errorf("%s: no command, and the process driver cannot start a server without one", p.Game)
@@ -70,12 +83,41 @@ func TestGameKeysAreUnique(t *testing.T) {
 }
 
 func TestPresetForRejectsWhatIsNotThere(t *testing.T) {
-	if _, err := PresetFor("minecraft"); err == nil {
-		t.Fatal("minecraft is not installable from Steam and must not resolve")
+	// Terraria has no permanent "latest" download to resolve against, so it is
+	// deliberately absent rather than pinned to a version that will go stale.
+	if _, err := PresetFor("terraria"); err == nil {
+		t.Fatal("terraria has no resolvable download and must not be offered")
 	}
 
-	if _, err := PresetFor("valheim"); err != nil {
-		t.Fatalf("valheim should resolve: %v", err)
+	for _, game := range []string{"valheim", "minecraft", "factorio"} {
+		if _, err := PresetFor(game); err != nil {
+			t.Errorf("%s should resolve: %v", game, err)
+		}
+	}
+}
+
+/*
+🚨 A download token must be one the installer actually understands.
+
+A typo'd token is indistinguishable from a URL, so it would be fetched as one —
+producing a confusing network error at install time instead of a clear refusal
+here.
+*/
+func TestEveryDownloadIsAURLOrAKnownToken(t *testing.T) {
+	known := map[string]bool{"mojang:release": true, "factorio:stable": true}
+
+	for _, p := range presets {
+		if p.Download == "" {
+			continue
+		}
+
+		if known[p.Download] {
+			continue
+		}
+
+		if !strings.HasPrefix(p.Download, "https://") {
+			t.Errorf("%s: download %q is neither https nor a token the installer knows", p.Game, p.Download)
+		}
 	}
 }
 
@@ -151,8 +193,11 @@ func TestEveryPresetIsDescribedToTheForum(t *testing.T) {
 		if d.Label == "" || d.Game == "" {
 			t.Errorf("preset %q describes as %+v", d.ID, d)
 		}
-		if !d.FromSteam {
-			t.Errorf("preset %q should report as installable from Steam", d.ID)
+		// FromSteam tells the panel whether to warn about a long download, so
+		// it must match where the game actually comes from.
+		p, _ := PresetFor(d.Game)
+		if d.FromSteam != (p.SteamApp > 0) {
+			t.Errorf("preset %q reports FromSteam=%v but SteamApp=%d", d.ID, d.FromSteam, p.SteamApp)
 		}
 	}
 }

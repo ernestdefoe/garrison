@@ -56,6 +56,36 @@ type Template struct {
 	 */
 	SteamApp int `json:"steamApp,omitempty"`
 
+	/*
+	 * Download is where to fetch this game when it is NOT on Steam — a URL, or
+	 * a token the installer resolves against the publisher's own manifest
+	 * ("mojang:release", "factorio:stable").
+	 *
+	 * 🚨 A token rather than a link for anything whose address changes per
+	 * release. Mojang publishes a different URL for every Minecraft version, so
+	 * a literal one would install whatever was current the day it was written
+	 * and then quietly rot.
+	 */
+	Download string `json:"download,omitempty"`
+
+	// Archive says how to treat what was downloaded: "tar.gz", "tar.xz",
+	// "zip", or empty for a plain file saved as DownloadAs.
+	Archive string `json:"archive,omitempty"`
+
+	// DownloadAs names a plain (unarchived) download — server.jar and friends.
+	DownloadAs string `json:"downloadAs,omitempty"`
+
+	/*
+	 * NeedsBinary is a command this game cannot run without, checked at INSTALL
+	 * time rather than at first start.
+	 *
+	 * 🚨 Minecraft needs a JRE, and Garrison does not install one. Finding that
+	 * out after a download, from a start failure, is the same bad trade as a
+	 * wrong Steam app id: the cost has already been paid before the problem is
+	 * mentioned. Said up front, it is one apt-get away.
+	 */
+	NeedsBinary string `json:"needsBinary,omitempty"`
+
 	// InstallRoot is the directory new servers are created under. Each gets
 	// its own subdirectory named after its id.
 	InstallRoot string `json:"installRoot"`
@@ -227,6 +257,28 @@ func (t Template) Install(ctx context.Context, id string, progress func(string))
 	 */
 	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return fmt.Errorf("could not create %s: %w", dir, err)
+	}
+
+	/*
+	 * 🚨 Checked BEFORE anything is downloaded.
+	 *
+	 * Minecraft needs a JRE that Garrison does not install. Discovering that
+	 * from a failed start, after a download, wastes the operator's bandwidth
+	 * to tell them something that was knowable in advance.
+	 */
+	if t.NeedsBinary != "" {
+		if _, err := exec.LookPath(t.NeedsBinary); err != nil {
+			return fmt.Errorf("%q needs %q on this host and it is not installed: %w", t.ID, t.NeedsBinary, err)
+		}
+	}
+
+	if t.SteamApp <= 0 && t.Download != "" {
+		resolved, rerr := resolveDownload(ctx, t.Download)
+		if rerr != nil {
+			return rerr
+		}
+
+		return fetchInto(ctx, resolved, t.Archive, t.DownloadAs, dir, progress)
 	}
 
 	if t.SteamApp <= 0 {
