@@ -556,6 +556,34 @@
   }
 }
 
+/*
+ * The instructions, above the values.
+ *
+ * 🚨 Full text colour, not muted. This is the one line on the page a player who
+ * has never joined this game actually needs, and greying it out would rank it
+ * below the address it explains.
+ */
+.GarrisonServerPage-connect {
+  margin: 0 0 10px;
+  line-height: 1.5;
+
+  code {
+    // The address inside a sentence still has to be copyable at a glance.
+    word-break: break-all;
+  }
+}
+
+/*
+ * The two fallbacks, muted, because both are admissions rather than answers:
+ * one says the port is only a guess, the other that nobody published anything.
+ */
+.GarrisonServerPage-portHint,
+.GarrisonServerPage-joinMissing {
+  color: var(--muted-color);
+  font-size: 13px;
+  margin: 8px 0 0;
+}
+
 .GarrisonServerPage-missing {
   color: var(--muted-color);
   padding: 24px 0;

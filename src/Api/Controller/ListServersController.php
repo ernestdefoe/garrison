@@ -4,6 +4,7 @@ namespace ErnestDefoe\Garrison\Api\Controller;
 
 use ErnestDefoe\Garrison\Game\Marks;
 use ErnestDefoe\Garrison\Model\Identity;
+use ErnestDefoe\Garrison\Game\Catalog;
 use ErnestDefoe\Garrison\Model\Server;
 use Flarum\Http\RequestUtil;
 use Laminas\Diactoros\Response\JsonResponse;
@@ -109,6 +110,18 @@ class ListServersController implements RequestHandlerInterface
                 'autoRemediate' => (bool) $server->auto_remediate,
 
                 'game' => $server->game,
+
+                /*
+                 * 🚨 The usual port for this GAME, not a claim about this
+                 * server. It fills the silence for a reader who wants to join
+                 * and whose operator never filled in a join address — the
+                 * commonest state a server page is in, because setting one is
+                 * optional and easy to skip.
+                 *
+                 * `joinAddress` always wins where it exists; this is only ever
+                 * shown as "usually port N".
+                 */
+                'defaultPort' => Catalog::port($server->game),
                 'iconUrl' => $server->icon_url,
                 'mark' => Marks::forGame($server->game) ?? Marks::FALLBACK,
                 'monogram' => Marks::monogram($server->name),

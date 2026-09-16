@@ -52,6 +52,47 @@ class Catalog
     ];
 
     /**
+     * The port a game listens on when nobody has changed it.
+     *
+     * 🚨 A default, offered as a hint, and never presented as fact about THIS
+     * server. An operator who moved the port and a reader who was told the
+     * wrong number would both be worse off than a reader who was told nothing:
+     * the join address the operator typed always wins, and this only fills the
+     * silence when they have not typed one.
+     *
+     * Games sharing 7777 and 27015 is not an error — Unreal and Source picked
+     * those long ago and a lot of games inherited them.
+     */
+    public const PORTS = [
+        'valheim' => 2456,
+        'minecraft' => 25565,
+        'minecraft-bedrock' => 19132,
+        'palworld' => 8211,
+        'rust' => 28015,
+        'ark' => 7777,
+        'cs2' => 27015,
+        'satisfactory' => 7777,
+        'factorio' => 34197,
+        '7dtd' => 26900,
+        'projectzomboid' => 16261,
+        'terraria' => 7777,
+        'enshrouded' => 15636,
+        'vrising' => 9876,
+        'dayz' => 2302,
+        'gmod' => 27015,
+    ];
+
+    /** The usual port for a game, or null when Garrison does not know one. */
+    public static function port(?string $game): ?int
+    {
+        if ($game === null) {
+            return null;
+        }
+
+        return self::PORTS[$game] ?? null;
+    }
+
+    /**
      * Artwork for games that have no Steam page.
      *
      * 🚨 Still a FETCH, never a bundled file and never a hotlink — the bytes

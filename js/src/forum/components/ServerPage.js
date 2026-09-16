@@ -278,19 +278,66 @@ export default class ServerPage extends Page {
     );
   }
 
+  /**
+   * How to actually get into this server.
+   *
+   * 🚨 Rendered even when the operator published no address, which is the
+   * commonest state a server page is in — setting one is optional and easy to
+   * skip. A page that answers "is it up?" and then says nothing about joining
+   * sends the reader to ask in chat, which is the thing this product exists to
+   * stop.
+   */
   join(s) {
-    if (!s.joinAddress && !s.joinCode && !s.joinPassword) return null;
+    const steps = s.game ? app.translator.trans(`ernestdefoe-garrison.forum.connect.${s.game}`, {
+      address: <code>{s.joinAddress || this.addressHint(s)}</code>,
+    }) : null;
+
+    if (!steps && !s.joinAddress && !s.joinCode && !s.joinPassword) return null;
 
     return (
       <div className="GarrisonServerPage-join" key="join">
         <h3>{app.translator.trans('ernestdefoe-garrison.forum.join')}</h3>
+
+        {/*
+          🚨 The instructions come FIRST, above the values.
+          Somebody who already knows the game reads past them in a second;
+          somebody who does not is exactly who the panel is for, and making
+          them infer the steps from an address and a password is the gap this
+          closes.
+        */}
+        {steps ? <p className="GarrisonServerPage-connect">{steps}</p> : null}
+
         <dl>
           {s.joinAddress ? this.pair('join_address', <code>{s.joinAddress}</code>) : null}
           {s.joinPassword ? this.pair('join_password', <code>{s.joinPassword}</code>) : null}
           {s.joinCode ? this.pair('join_code_label', <code>{s.joinCode}</code>) : null}
         </dl>
+
+        {!s.joinAddress && s.defaultPort ? (
+          <p className="GarrisonServerPage-portHint">
+            {app.translator.trans('ernestdefoe-garrison.forum.join_usual_port', { port: s.defaultPort })}
+          </p>
+        ) : null}
+
+        {!s.joinAddress && !s.joinCode ? (
+          <p className="GarrisonServerPage-joinMissing">
+            {app.translator.trans('ernestdefoe-garrison.forum.join_no_details')}
+          </p>
+        ) : null}
       </div>
     );
+  }
+
+  /**
+   * 🚨 A PLACEHOLDER, never a guess dressed as an address.
+   *
+   * Garrison knows the game's usual port but not the host's address — that is
+   * the operator's to publish. Printing something that looked like a real
+   * address would send people to somewhere that does not answer, and they
+   * would blame the server rather than the empty field.
+   */
+  addressHint(s) {
+    return app.translator.trans('ernestdefoe-garrison.forum.join_address_placeholder');
   }
 
   /**
