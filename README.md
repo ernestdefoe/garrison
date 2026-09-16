@@ -236,6 +236,6 @@ No other Flarum extension is required.
 | `ernestdefoe/garrison` (this one) | **MIT** — use it, fork it, keep it |
 | `ernestdefoe/garrison-pro` | Commercial, one licence per forum |
 
-Support is at **<https://ernestdefoe.online/t/garrison>**, and issues on this
+Support is at **<https://ernestdefoe.online/d/100>**, and issues on this
 repository are welcome too. Bugs and feature requests both — every fix in the
 changelog started as somebody saying something was wrong.

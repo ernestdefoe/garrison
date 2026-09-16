@@ -89,7 +89,7 @@ jobs:
       # absence.
       - name: Unit tests
         working-directory: js
-        run: node --test tests/
+        run: node --test tests/*.test.mjs
 
       # A bundle that does not build is an extension that cannot be released,
       # and webpack failures here are usually a bad import path — which is the

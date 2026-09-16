@@ -6,9 +6,8 @@
 
     Garrison — run your game servers from your forum (Built using AI)
 
-  🚨 One gate left before this is true: `ernestdefoe/garrison` has to be
-  submitted to Packagist. Until it is, the free install line in this post
-  resolves to nothing. Everything else it describes is live.
+  Everything below is live: both packages are released, the free one is on
+  Packagist, and the Client Area is selling the paid one.
 -->
 
 # Garrison — run your game servers from your forum
@@ -136,6 +135,7 @@ is the whole of the mechanism.
 
 ## Support
 
-- Support forum: <https://ernestdefoe.online/t/garrison>
+- **Support discussion: <https://ernestdefoe.online/d/100>** — the place to ask
+  about either package, free or paid.
 - Issues for the free package: <https://github.com/ernestdefoe/garrison/issues>
 - Or reply here — I read this thread.
