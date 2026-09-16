@@ -4,7 +4,9 @@
 
 Garrison puts your Minecraft, Valheim, ARK, Rust, Terraria or Factorio server on
 your Flarum forum — its status, its console, and the people playing on it right
-now. Any server you can install, with or without Docker.
+now. Any server you can install, with or without Docker — and for seven popular
+games it can do the installing, from a list, without you looking up a Steam app
+id.
 
 **This package is free and MIT licensed**, and it covers one host and one
 server: start, stop and restart, the console, the server pages, the widget, and

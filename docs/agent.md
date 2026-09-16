@@ -197,6 +197,50 @@ Steam app id all come from a template in this file. A fully compromised forum
 can install one of the games its operator already listed, into the directory its
 operator already chose, and nothing else anywhere else.
 
+### The quick way: the built-in catalogue
+
+You do not have to know a game's Steam app id or its launch flags. Name the
+games you are willing to host and where they may live:
+
+```json
+"catalog": {
+  "installRoot": "/srv/games",
+  "games": ["valheim", "rust", "ark"]
+}
+```
+
+Each becomes an ordinary template at load — same validation, same install path,
+same picker in the forum. Garrison currently knows:
+
+| key | game |
+|---|---|
+| `valheim` | Valheim |
+| `rust` | Rust |
+| `ark` | ARK: Survival Evolved |
+| `7dtd` | 7 Days to Die |
+| `projectzomboid` | Project Zomboid |
+| `palworld` | Palworld |
+| `satisfactory` | Satisfactory |
+
+🚨 **This does not widen what the agent may install.** You still name every game
+and still choose the directory. What it removes is the research — the app id,
+where the binary sits inside the download, the flag that stops a headless server
+trying to open a window. Those are facts about a game, not decisions about your
+host.
+
+🚨 **Minecraft, Factorio and Terraria are deliberately absent.** None of them
+installs through SteamCMD — Minecraft is a jar from Mojang, Factorio a tarball
+from its own site, Terraria a zip — and this installer downloads from Steam and
+nothing else. Listing them would produce a template that looks installable and
+then fails after a multi-gigabyte download. Garrison runs all three perfectly
+well once they are on the host; write them out as templates below, pointing
+`command` at what you installed.
+
+Writing a template out by hand **overrides** the catalogue entry with the same
+id, which is how you change a launch flag without losing the rest.
+
+### The long way: writing a template out
+
 ```json
 "templates": [
   {

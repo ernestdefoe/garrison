@@ -221,3 +221,98 @@ func TestTheRewrittenFileStaysReadable(t *testing.T) {
 		t.Fatalf("the rewritten config is not valid JSON: %v", err)
 	}
 }
+
+/*
+The catalogue shortcut, and the two things about it that could go wrong quietly.
+*/
+func TestCatalogExpandsIntoRealTemplates(t *testing.T) {
+	path := write(t, `{
+		"forumUrl": "https://example.test", "token": "t", "servers": [],
+		"catalog": { "installRoot": "/srv/games", "games": ["valheim", "rust"] }
+	}`)
+
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(cfg.Templates) != 2 {
+		t.Fatalf("expanded %d templates, want 2", len(cfg.Templates))
+	}
+
+	tpl, err := provision.Find(cfg.Templates, "valheim")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if tpl.SteamApp != 896660 {
+		t.Errorf("valheim app id is %d", tpl.SteamApp)
+	}
+	if tpl.InstallRoot != "/srv/games/valheim" {
+		t.Errorf("install root is %q — it must be under the operator's root", tpl.InstallRoot)
+	}
+	if tpl.Driver != "process" {
+		t.Errorf("driver is %q", tpl.Driver)
+	}
+}
+
+/*
+🚨 A hand-written template must WIN over the catalogue entry for the same id.
+
+That is the whole point of being able to write one out: an operator who needs a
+different launch flag overrides the built-in. If the catalogue appended anyway
+the config would fail validation with "duplicate template id", and the operator
+would be told their own override was the error.
+*/
+func TestAHandWrittenTemplateOverridesTheCatalogue(t *testing.T) {
+	path := write(t, `{
+		"forumUrl": "https://example.test", "token": "t", "servers": [],
+		"templates": [{
+			"id": "valheim", "driver": "process", "installRoot": "/opt/mine",
+			"command": "./valheim_server.x86_64 -crossplay"
+		}],
+		"catalog": { "installRoot": "/srv/games", "games": ["valheim"] }
+	}`)
+
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatalf("the operator's own template should not collide with the catalogue: %v", err)
+	}
+
+	if len(cfg.Templates) != 1 {
+		t.Fatalf("got %d templates, want the operator's one", len(cfg.Templates))
+	}
+
+	tpl, _ := provision.Find(cfg.Templates, "valheim")
+
+	if tpl.InstallRoot != "/opt/mine" {
+		t.Errorf("install root is %q — the catalogue overwrote the operator", tpl.InstallRoot)
+	}
+	if !strings.Contains(tpl.Command, "-crossplay") {
+		t.Errorf("command is %q — the operator's flags were lost", tpl.Command)
+	}
+}
+
+func TestCatalogRejectsAGameItDoesNotKnow(t *testing.T) {
+	// Minecraft is not installable from Steam, so it must be refused at load
+	// rather than produce a template that fails after a long download.
+	path := write(t, `{
+		"forumUrl": "https://example.test", "token": "t", "servers": [],
+		"catalog": { "installRoot": "/srv/games", "games": ["minecraft"] }
+	}`)
+
+	if _, err := Load(path); err == nil {
+		t.Fatal("an unknown catalogue game must fail at load")
+	}
+}
+
+func TestCatalogNeedsAnInstallRoot(t *testing.T) {
+	path := write(t, `{
+		"forumUrl": "https://example.test", "token": "t", "servers": [],
+		"catalog": { "games": ["valheim"] }
+	}`)
+
+	if _, err := Load(path); err == nil {
+		t.Fatal("a catalogue with no installRoot has nowhere to put a server")
+	}
+}
