@@ -52,6 +52,24 @@ class AgentPollController implements RequestHandlerInterface
 
         $this->gateway->recordConsole($agent, (array) ($body['console'] ?? []));
 
+        /*
+         * 🚨 `events`, which the forum ignored entirely until 1.2.2.
+         *
+         * The agent has always shipped an event stream alongside the console —
+         * it is how anything that is not a log line reports itself. Nothing
+         * here read it, so every event was posted, accepted with a 200 and
+         * thrown away.
+         *
+         * What that hid: provisioning. An install runs in a goroutine long
+         * after its command has been answered, and every word it has to say —
+         * "downloading", "install failed: …", "installed, but this agent
+         * cannot persist new servers" — goes through that stream. So a failed
+         * install looked exactly like a successful one: the command said
+         * `started: true`, and then silence for ever. Found by installing a
+         * game and watching nothing happen.
+         */
+        $this->gateway->recordEvents($agent, (array) ($body['events'] ?? []));
+
         foreach ((array) ($body['results'] ?? []) as $result) {
             if (! is_array($result) || ! isset($result['id'])) {
                 continue;

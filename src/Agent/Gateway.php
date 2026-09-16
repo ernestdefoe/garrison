@@ -375,6 +375,72 @@ class Gateway
     }
 
     /**
+     * Fold the agent's event stream into the console.
+     *
+     * 🚨 Events are NOT console lines, and the difference is why they were
+     * missed. Console output is shipped continuously from log files the agent
+     * is already reading; an event is the agent itself speaking — an installer
+     * reporting progress, a background job reporting that it failed. They
+     * arrive in the same poll under a different key, and until 1.2.2 nothing
+     * read that key at all.
+     *
+     * 🚨 Recorded as console output rather than given a channel of their own.
+     * The console is where somebody installing a game server already is, and a
+     * second stream would be a second thing to build, poll and think to look
+     * at. That was always the intent — see the agent's runInstall, which says
+     * exactly this — it just never arrived.
+     *
+     * @param array<int, mixed> $events
+     */
+    public function recordEvents(GarrisonAgent $agent, array $events): void
+    {
+        if ($events === []) {
+            return;
+        }
+
+        $lines = [];
+
+        foreach ($events as $event) {
+            if (! is_array($event) || ($event['kind'] ?? null) !== 'console') {
+                // Only console-kind events have a home today. Anything else is
+                // dropped deliberately and visibly, rather than by omission.
+                continue;
+            }
+
+            $data = $event['data'] ?? null;
+
+            /*
+             * 🚨 `data` is a JSON document nested inside the payload, because
+             * an Event carries an opaque body whose shape depends on its kind.
+             * It arrives already decoded when the agent sends an object, and as
+             * a string when it does not — both are accepted rather than one
+             * being assumed.
+             */
+            if (is_string($data)) {
+                try {
+                    $data = json_decode($data, true, 512, JSON_THROW_ON_ERROR);
+                } catch (\JsonException) {
+                    continue;
+                }
+            }
+
+            if (! is_array($data) || ! isset($data['server'], $data['text'])) {
+                continue;
+            }
+
+            if (empty($data['at']) && ! empty($event['at'])) {
+                $data['at'] = $event['at'];
+            }
+
+            $lines[] = $data;
+        }
+
+        // Reuses recordConsole so there is ONE place that decides how a line is
+        // timestamped, truncated and written. Two writers would drift.
+        $this->recordConsole($agent, $lines);
+    }
+
+    /**
      * Store console output the agent shipped.
      *
      * @param array<int, mixed> $lines
