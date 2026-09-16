@@ -4,6 +4,7 @@ namespace ErnestDefoe\Garrison\Console;
 
 use ErnestDefoe\Garrison\Agent\Gateway;
 use ErnestDefoe\Garrison\Game\Artwork;
+use ErnestDefoe\Garrison\Agent\Dispatcher;
 use ErnestDefoe\Garrison\Health\Ladder;
 use ErnestDefoe\Garrison\Model\Server;
 use ErnestDefoe\Garrison\Players\Tracker;
@@ -23,6 +24,7 @@ class HealthCommand extends AbstractCommand
 {
     public function __construct(
         protected Ladder $ladder,
+        protected Dispatcher $dispatcher,
         protected Artwork $artwork,
         protected Gateway $gateway,
         protected Heartbeat $heartbeat,
@@ -137,9 +139,30 @@ class HealthCommand extends AbstractCommand
          * three days on the forum this extension was built on, and the only
          * reason it was found was somebody going looking.
          */
+        /*
+         * 🚨 Commands an agent took and never answered.
+         *
+         * Dispatcher::expireStale has existed since the beginning, with a
+         * docblock explaining that such a command otherwise "says delivered for
+         * ever, which reads as in progress on a dashboard and makes an operator
+         * wait for something that will never end" — and nothing ever called it.
+         * A correct method nobody invokes is a dead feature, and this one was
+         * found the honest way: an agent restart while a command was in flight
+         * left a row on ernestdefoe.online stuck at `delivered` indefinitely.
+         *
+         * Here rather than on its own schedule, because this command already
+         * runs every minute and already exists to notice things that have
+         * quietly stopped.
+         */
+        $expired = $this->dispatcher->expireStale();
+
+        if ($expired > 0) {
+            $this->info('expired ' . $expired . ' command(s) an agent never answered');
+        }
+
         $this->heartbeat->beat();
 
-        if ($acted === 0 && $got === 0 && $closed === 0) {
+        if ($acted === 0 && $got === 0 && $closed === 0 && $expired === 0) {
             $this->info('Nothing to do.');
         }
 
