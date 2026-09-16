@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"os/user"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -250,6 +251,26 @@ func (t Template) Install(ctx context.Context, id string, progress func(string))
 	)
 
 	/*
+	 * 🚨 HOME, or SteamCMD dies before it starts.
+	 *
+	 * On Debian and Ubuntu `steamcmd` is a shell wrapper, and its very first
+	 * act is to use $HOME to find where to unpack itself. A systemd service
+	 * gets no HOME unless its unit sets one, so the wrapper exits 2 with
+	 *
+	 *     /usr/local/bin/steamcmd: 16: HOME: parameter not set
+	 *
+	 * and nothing is downloaded. Found on a real host: the install reported
+	 * failure into an event stream the forum was discarding at the time, so
+	 * the symptom was an empty directory and total silence.
+	 *
+	 * Supplied here rather than left to the operator's unit file, because an
+	 * agent that installs games only when somebody remembered to set HOME is
+	 * one that works on the packager's machine and fails on everybody else's.
+	 * An existing HOME is never overridden — the operator's environment wins.
+	 */
+	cmd.Env = withHome(os.Environ())
+
+	/*
 	 * 🚨 stderr is folded into stdout deliberately. SteamCMD reports several
 	 * of its most useful failures — a disk that filled, an app id that needs a
 	 * login — on stderr, and an installer that streams a tidy progress log
@@ -286,4 +307,28 @@ func (t Template) Install(ctx context.Context, id string, progress func(string))
 	}
 
 	return nil
+}
+
+/*
+withHome guarantees a HOME in the environment SteamCMD is run with.
+
+🚨 Falls back to the invoking user's home directory and only then to /tmp. A
+wrong-but-present HOME is far better than an absent one: SteamCMD unpacks
+itself there, so the worst case is a re-download into a scratch directory,
+against a certain failure to start at all.
+*/
+func withHome(env []string) []string {
+	for _, kv := range env {
+		if strings.HasPrefix(kv, "HOME=") && len(kv) > len("HOME=") {
+			return env
+		}
+	}
+
+	home := "/tmp"
+
+	if u, err := user.Current(); err == nil && u.HomeDir != "" {
+		home = u.HomeDir
+	}
+
+	return append(env, "HOME="+home)
 }

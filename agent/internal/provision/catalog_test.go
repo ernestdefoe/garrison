@@ -156,3 +156,61 @@ func TestEveryPresetIsDescribedToTheForum(t *testing.T) {
 		}
 	}
 }
+
+/*
+🚨 HOME must always be present for SteamCMD.
+
+On Debian and Ubuntu `steamcmd` is a shell wrapper whose first act uses $HOME.
+A systemd service has none unless its unit sets one, so without this the
+installer exits 2 having downloaded nothing — and the only clue is a line on
+stderr that a forum ignoring its event stream never showed anybody.
+*/
+func TestWithHomeAlwaysProvidesOne(t *testing.T) {
+	out := withHome([]string{"PATH=/usr/bin"})
+
+	var found string
+	for _, kv := range out {
+		if strings.HasPrefix(kv, "HOME=") {
+			found = kv
+		}
+	}
+
+	if found == "" || found == "HOME=" {
+		t.Fatalf("no usable HOME in %v", out)
+	}
+}
+
+func TestWithHomeDoesNotOverrideTheOperators(t *testing.T) {
+	out := withHome([]string{"HOME=/srv/steam", "PATH=/usr/bin"})
+
+	count := 0
+	for _, kv := range out {
+		if strings.HasPrefix(kv, "HOME=") {
+			count++
+			if kv != "HOME=/srv/steam" {
+				t.Errorf("overrode the operator's HOME with %q", kv)
+			}
+		}
+	}
+
+	if count != 1 {
+		t.Errorf("HOME appears %d times; a duplicate is ambiguous", count)
+	}
+}
+
+func TestWithHomeTreatsAnEmptyHomeAsAbsent(t *testing.T) {
+	// `HOME=` is exactly what a unit with `Environment=HOME=` produces, and the
+	// wrapper fails on it the same way it fails on no HOME at all.
+	out := withHome([]string{"HOME="})
+
+	ok := false
+	for _, kv := range out {
+		if strings.HasPrefix(kv, "HOME=") && len(kv) > len("HOME=") {
+			ok = true
+		}
+	}
+
+	if !ok {
+		t.Fatal("an empty HOME must be replaced, not accepted")
+	}
+}
