@@ -3,8 +3,15 @@
 **Run your game servers from the forum your players already live in.**
 
 Garrison puts your Minecraft, Valheim, ARK, Rust, Terraria or Factorio server on
-your Flarum forum — its status, its console, its backups, and the people playing
-on it right now. Any server you can install, with or without Docker.
+your Flarum forum — its status, its console, and the people playing on it right
+now. Any server you can install, with or without Docker.
+
+**This package is free and MIT licensed**, and it covers one host and one
+server: start, stop and restart, the console, the server pages, the widget, and
+the alerting that tells you when a server has quietly stopped accepting players.
+It is a whole product, not a trial, and it does not expire.
+[Garrison Pro](#garrison-pro) adds backups, off-site copies, scheduled work,
+config editing, in-game identity, and no limit on hosts or servers.
 
 ![The status page](screenshots/status-page.png)
 
@@ -165,17 +172,53 @@ Then pair a host and put its token in the agent's config:
 php flarum garrison:pair "my game host"
 ```
 
-Full setup — the agent, its config, backups, off-site copies, player tracking,
-install templates and the systemd unit — is in **[docs/agent.md](docs/agent.md)**.
+Full setup — the agent, its config, player tracking and the systemd unit — is in
+**[docs/agent.md](docs/agent.md)**.
 
 🚨 **Garrison needs Flarum's scheduler.** Without this line in your crontab it
-will check nothing, restart nothing and back up nothing, silently:
+will check nothing and restart nothing, silently:
 
 ```
 * * * * * php /path/to/forum/flarum schedule:run
 ```
 
 Garrison tells you on its admin page if it is missing.
+
+## Garrison Pro
+
+**$99/year or $12/month.** A separate package under a commercial licence, which
+adds to this one rather than replacing it:
+
+- **Backups you can actually restore from** — and a safety copy is taken
+  automatically *before* every restore, so the most dangerous button in the
+  product is reversible.
+- **Copies somewhere else** — off the game host to S3-compatible storage,
+  because a backup on the machine that died is not a backup.
+- **Scheduled work** — nightly restarts, backups and messages to players, with
+  advance warnings, which are the difference between a restart and an outage.
+- **Settings without a file manager** — edit `server.properties` and friends
+  from the forum, the files you choose and optionally only the keys you choose.
+- **Player identity, proved in the game** — a player claims a character,
+  Garrison whispers them a code *inside the game*, and their playtime appears on
+  their profile and the server leaderboard.
+- **Unlimited hosts and servers.**
+
+Buy it at **<https://ernestdefoe.online/account>**, then:
+
+```bash
+composer config repositories.ernestdefoe composer https://ernestdefoe.online/composer
+composer config --auth http-basic.ernestdefoe.online token YOUR_TOKEN
+composer require ernestdefoe/garrison-pro
+php flarum extension:enable ernestdefoe-garrison-pro
+php flarum cache:clear
+```
+
+There is **no licence key anywhere in Garrison** — no phone-home, no grace
+period, no expiry. The paid features live in the paid package, and that is the
+whole of the mechanism. Removing it never deletes anything: backups already
+taken stay on disk and stay listed, schedules pause rather than vanish, identity
+links stay linked, and a running server is never stopped by anything to do with
+licensing. See **[docs/entitlement.md](docs/entitlement.md)**.
 
 ## Requirements
 
@@ -188,8 +231,11 @@ No other Flarum extension is required.
 
 ## Licence & support
 
-Commercial. £/$ per the store listing; one licence covers one forum.
+| Package | Licence |
+|---|---|
+| `ernestdefoe/garrison` (this one) | **MIT** — use it, fork it, keep it |
+| `ernestdefoe/garrison-pro` | Commercial, one licence per forum |
 
-Support is at [ernestdefoe.online](https://ernestdefoe.online). Bugs and feature
-requests are welcome there — every fix in this changelog started as somebody
-saying something was wrong.
+Support is at **<https://ernestdefoe.online/t/garrison>**, and issues on this
+repository are welcome too. Bugs and feature requests both — every fix in the
+changelog started as somebody saying something was wrong.

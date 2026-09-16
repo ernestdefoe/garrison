@@ -1,19 +1,14 @@
 <!--
   The discuss.flarum.org announcement, kept with the code.
 
-  🚨 NOT POSTABLE YET. It describes two packages, and as of 1.0.2 neither of the
-  two exists in the form below. Three gates, all in docs/entitlement.md:
-
-    1. the repo split (ernestdefoe/garrison MIT + ernestdefoe/garrison-pro)
-    2. ernestdefoe/garrison made public and submitted to Packagist
-    3. garrison-pro published, and product 12 flipped active in the Client Area
-
-  Posting before all three means advertising an install command that fails.
-
-  Thread title (the "(Built using AI)" is a standing rule — it goes in the
-  TITLE, not the body):
+  Thread title — the "(Built using AI)" is a standing rule and goes in the
+  TITLE, not the body:
 
     Garrison — run your game servers from your forum (Built using AI)
+
+  🚨 One gate left before this is true: `ernestdefoe/garrison` has to be
+  submitted to Packagist. Until it is, the free install line in this post
+  resolves to nothing. Everything else it describes is live.
 -->
 
 # Garrison — run your game servers from your forum
