@@ -174,4 +174,31 @@ class Schedule extends AbstractModel
             default => null,
         };
     }
+
+    /**
+     * One schedule, shaped for the admin panel.
+     *
+     * 🚨 On the MODEL rather than in a controller, because two packages need
+     * the identical shape: garrison reports existing schedules from its admin
+     * endpoint so that removing pro leaves them visible and paused, and
+     * garrison-pro echoes a row back after creating or editing one. The same
+     * JSON built in two repositories would drift, and the drift would show up
+     * as a field that is silently absent in one of the two paths.
+     */
+    public function toAdminArray(): array
+    {
+        return [
+            'id' => $this->id,
+            'serverId' => $this->server_id,
+            'kind' => $this->kind,
+            'atMinute' => (int) $this->at_minute,
+            'days' => $this->days,
+            'timezone' => $this->timezone,
+            'payload' => $this->payload,
+            'warnMinutes' => (int) $this->warn_minutes,
+            'warnPayload' => $this->warn_payload,
+            'enabled' => (bool) $this->enabled,
+            'lastRunAt' => $this->last_run_at?->toIso8601String(),
+        ];
+    }
 }

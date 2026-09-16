@@ -1,5 +1,7 @@
 import app from 'flarum/admin/app';
 
+import drainAdminQueue from './slots';
+
 /*
  * 🚨 `export { default as extend }`, NOT `export * from './extend'`.
  *
@@ -16,4 +18,11 @@ export { default as extend } from './extend';
  * extend.js. Nothing else has to happen at boot, but the initializer stays so
  * the extension reports as initialised rather than as a silent no-op.
  */
-app.initializers.add('ernestdefoe-garrison', () => {});
+app.initializers.add('ernestdefoe-garrison', () => {
+  /*
+   * Collect whatever garrison-pro queued for the admin panel. See slots.js:
+   * the two bundles are separate files and nothing orders them, so pro pushes
+   * and whichever side runs second drains.
+   */
+  drainAdminQueue();
+});

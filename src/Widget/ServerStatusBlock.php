@@ -100,7 +100,7 @@ class ServerStatusBlock implements BlockInterface
      */
     public function resolve(array $settings, User $actor): array
     {
-        $query = Server::query()->where('is_public', true);
+        $query = Server::query()->entitled()->where('is_public', true);
 
         if (($settings['servers'] ?? 'public') === 'running') {
             $query->where('state', 'running');

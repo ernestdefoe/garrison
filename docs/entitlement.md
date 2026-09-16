@@ -1,7 +1,8 @@
 # Open core — the free tier, and what the paid package adds
 
-> **Status: specification. None of this is built.** As of 1.0.2 Garrison is one
-> proprietary package, delivered by access alone.
+> **Status: BUILT in 1.1.0.** Where this document and the code disagree, the
+> code is right and this note says why — three decisions changed while building
+> it, all in the direction of less risk.
 
 Garrison sells at **$99/year or $12/month**, above a **free tier of one host and
 one server** covering lifecycle, console and the status widget. The free tier is
@@ -76,26 +77,72 @@ read as a hostage situation rather than an upgrade.
 **Caps:** one `GarrisonAgent`, one `Server`. Enforced in the MIT package; lifted
 by the presence of `garrison-pro`.
 
-## 4. The split — what physically moves
+## 3a. What did NOT move, and why
 
-`garrison-pro` is a Flarum extension in its own right, depending on `garrison`.
-Moving out of the MIT repo:
+Three things the earlier draft of this document said would move, and did not:
 
-- `src/Api/Controller/` — the backup, config and identity paths, and the
-  provisioning half of `AdminController`
-- `src/Schedule/` and `src/Console/ScheduleCommand.php` — the scheduling engine
-- `src/Players/` and `src/Model/Identity.php`, `PlaySession.php` — identity links,
-  playtime, leaderboard
-- `js/src/forum/components/` — `Backups`, `Settings`, `Leaderboard`,
-  `LinkIdentity`
-- `js/src/admin/components/` — `Provision`, `Schedules`
-- The migrations that create those tables
+**The migrations, and the tables they create.** All thirteen stay in garrison,
+including the ones only pro uses. The draft called this "the hard part" and it
+was right: pro's migrations would have had to ADOPT tables that already exist
+with data on any forum that had run 1.0.x, and getting that wrong loses somebody
+a schedule set. Against that, the cost of the free package creating two tables it
+never writes to is nothing at all. 🚨 It also keeps `Server`'s relations coherent
+in one package rather than split across two, one of which can be disabled.
 
-🚨 **The migrations are the hard part.** Tables created by the MIT package today
-would move to `garrison-pro`, and a forum already running 1.0.x has those tables
-with data in them. `garrison-pro`'s migrations must be written to adopt existing
-tables rather than create them blindly, or the first person to upgrade loses a
-schedule set or an identity table. Decide this before the split, not during it.
+**The models.** Same reasoning. `Schedule`, `Identity` and `PlaySession` are
+garrison's; pro uses them through the composer dependency. The row-shaping for a
+schedule sits on the model itself (`toAdminArray`) precisely because both
+packages render it and two copies would drift.
+
+**The strings and the stylesheet.** Both stay in garrison. Splitting them along
+the same line as the code means finding and moving every key and every rule
+exactly once, and the failure mode for missing one is loud and user-facing: a raw
+`ernestdefoe-garrison.forum.backups.title` in a paying customer's panel. It would
+also leave a forum that removed pro with half-styled remnants.
+
+So the line that was actually built is: **garrison owns the schema, the models,
+the strings and the styles; pro owns the behaviour and the components.**
+
+## 4. The split — what actually moved
+
+`garrison-pro` is a Flarum extension in its own right, with `ernestdefoe/garrison`
+as a hard composer dependency. What physically left the MIT repo:
+
+| Moved to pro | |
+|---|---|
+| `Api/Controller/IdentityController` | the in-game identity flow |
+| `Api/Controller/PlaytimeController` | playtime and the leaderboard |
+| `Players/Linker` | issues and checks the in-game code |
+| `Schedule/Runner` | the scheduling engine |
+| `Console/ScheduleCommand`, `Console/BackupCommand` | and both their cron entries |
+| the schedule and identity write-actions out of `AdminController` | into pro's own controller |
+| `js/.../Backups`, `Settings`, `Leaderboard`, `LinkIdentity`, `ProfilePlaytime` | |
+| `js/.../Provision`, `Schedules`, and the admin identities section | |
+
+Everything else stayed. See §3a for the three things that deliberately did not
+move, and why.
+
+### How pro attaches, in both languages
+
+**PHP:** one call, `Edition::enablePro()`, from pro's service provider. 🚨 From a
+service provider rather than a `class_exists()` sniff inside garrison, because
+Flarum does not boot the providers of DISABLED extensions — an operator who
+installs pro and switches it off must get the free tier, and a sniff would light
+every paid feature back up silently.
+
+**JS:** pro PUSHES onto a queue; garrison drains it. `GarrisonPanelQueue` for the
+server page, `GarrisonAdminQueue` for the admin panel (three slots: page, host,
+server). 🚨 A queue rather than a function call because the two bundles are
+separate files and nothing orders them — pro's may evaluate first. Same pattern
+garrison's widget hosts already use.
+
+Garrison also publishes a small runtime surface, `globalThis.Garrison`
+(`command`, `awaitCommand`, `refresh`, `subscribe`, `byId`, `bytes`, `duration`).
+🚨 This exists so pro does not carry its own copy of the store: the store is an
+INSTANCE — one poll loop, one cache — and a second copy would double the request
+rate on exactly the forums that paid. Pure helpers may be copied; instances must
+be shared. It is a published interface: the two packages can be on different
+versions on a real forum, so add to it rather than changing it.
 
 ### The agent stays MIT and stays whole
 
@@ -121,15 +168,21 @@ which makes "what may be queued" a published, testable list rather than a
 scattering of conditionals, and means the MIT package has no dead branches for
 features it does not contain.
 
-The **cap** check (is this the entitled server?) goes in `assertPermitted()`, and
-**ordering matters** — this method has already produced one ordering bug, where
-the provisioning branch sat above the `garrison.manage` shortcut and refused
-administrators. `tests/DispatcherOrderTest.php` exists because of it.
+The verb gate and the cap both went into `queue()` itself, ABOVE the call to
+`assertPermitted()` — not inside it, as the draft proposed.
 
-The cap check must sit **above** the `garrison.manage` shortcut. An administrator
-on the free tier still has `garrison.manage`, so a check below the shortcut never
-runs for the one person most likely to hit it — the exact shape of the bug the
-ordering test already guards. Extend that test; do not write a new one beside it.
+🚨 That is a stronger arrangement than getting the order right inside
+`assertPermitted()`, and it is the whole reason it was done this way: a check
+that lives above the permission method **cannot** be ordered below the
+`garrison.manage` shortcut, because it is not in that method at all. An
+administrator on the free tier still holds `garrison.manage`, so a gate placed
+below that shortcut would never run for the one person most likely to own a
+second server — the exact shape of the bug `DispatcherOrderTest` exists to catch.
+Structure beats vigilance: this one cannot drift back.
+
+Verified against a real administrator on dev, with `manage=true`: lifecycle on
+the entitled server queued, `backup.create` and `config.set` refused, and
+lifecycle on a server beyond the cap refused.
 
 Refusals are a `ValidationException` with a distinct code (`not_entitled`), never
 a 404 and never a generic failure: an operator must be able to tell "this tier

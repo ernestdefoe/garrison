@@ -26,7 +26,7 @@ class ListServersController implements RequestHandlerInterface
     {
         $actor = RequestUtil::getActor($request);
 
-        $query = Server::query()->with('agent')->orderBy('name');
+        $query = Server::query()->entitled()->with('agent')->orderBy('name');
 
         /**
          * 🚨 `is_public` on the server is the ONLY thing that decides whether

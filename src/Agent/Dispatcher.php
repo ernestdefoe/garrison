@@ -3,6 +3,8 @@
 namespace ErnestDefoe\Garrison\Agent;
 
 use Carbon\Carbon;
+use ErnestDefoe\Garrison\Edition;
+use ErnestDefoe\Garrison\Entitled;
 use ErnestDefoe\Garrison\Model\Command;
 use ErnestDefoe\Garrison\Model\Server;
 use Flarum\Foundation\ValidationException;
@@ -30,6 +32,19 @@ class Dispatcher
      * Verbs the FORUM may queue. Deliberately a subset of what the agent
      * implements: agent.ping and agent.info are the agent's own housekeeping
      * and are not things a person clicks.
+     */
+    /**
+     * Every verb the agent understands — the CATALOGUE, not the permission.
+     *
+     * 🚨 Which of these a given install may actually queue is `Edition::verbs()`,
+     * because half of them belong to garrison-pro. This list stays complete so
+     * that an unknown verb and an unlicensed one give different answers: one is
+     * a typo, the other is an upgrade, and telling a customer "unknown verb"
+     * when they have hit the edge of their tier is a support ticket about
+     * nothing.
+     *
+     * `EditionTest` asserts that FREE_VERBS and PRO_VERBS partition this list
+     * exactly, so a verb added here can never quietly belong to neither tier.
      */
     public const QUEUEABLE = [
         'server.status',
@@ -81,7 +96,8 @@ class Dispatcher
     ];
 
     public function __construct(
-        protected TranslatorInterface $translator
+        protected TranslatorInterface $translator,
+        protected Entitled $entitled
     ) {
     }
 
@@ -96,6 +112,37 @@ class Dispatcher
             // the API by anybody with an account.
             throw new ValidationException([
                 'verb' => $this->translator->trans('ernestdefoe-garrison.api.errors.unknown_verb'),
+            ]);
+        }
+
+        /*
+         * 🚨 A real verb this edition does not have, answered as ITS OWN thing.
+         *
+         * Not "unknown verb", which would send somebody hunting for a typo in
+         * a word that is spelled correctly, and not "not permitted", which
+         * reads as a permission an administrator could go and grant. This is
+         * the only refusal in the product that no setting on this forum can
+         * lift, so it says so.
+         */
+        if (! in_array($verb, Edition::verbs(), true)) {
+            throw new ValidationException([
+                'verb' => $this->translator->trans('ernestdefoe-garrison.api.errors.needs_pro'),
+            ]);
+        }
+
+        /*
+         * 🚨 And the SERVER has to be one this edition covers.
+         *
+         * Checked here beside the verb, above every permission branch, because
+         * an administrator on the free tier still holds `garrison.manage` —
+         * a cap enforced below that shortcut would never run for the one person
+         * most likely to own a second server. That is the same ordering
+         * mistake `DispatcherOrderTest` already exists to catch, and it reads
+         * as a broken feature rather than as an unenforced limit.
+         */
+        if (! $this->entitled->allowsServer((int) $server->id)) {
+            throw new ValidationException([
+                'verb' => $this->translator->trans('ernestdefoe-garrison.api.errors.needs_pro'),
             ]);
         }
 

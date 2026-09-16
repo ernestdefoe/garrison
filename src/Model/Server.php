@@ -14,6 +14,37 @@ class Server extends AbstractModel
     protected $table = 'garrison_servers';
 
     /**
+     * Only the servers this edition of Garrison covers.
+     *
+     * 🚨 Applied at the two places a READER can see servers — the forum's
+     * list and the widget — and deliberately NOT applied to the admin panel or
+     * to the agent gateway.
+     *
+     * The gateway must keep recording every server the agent reports, or an
+     * operator who installs garrison-pro later gets a history that begins the
+     * moment they paid instead of one that was there all along. The admin
+     * panel must keep showing every server, or choosing which one the free
+     * tier covers would mean choosing from a list that already hides the
+     * others — and a server that has quietly vanished from the panel reads as
+     * Garrison having lost it.
+     *
+     * 🚨 Qualified with the table name. A bare `id` is ambiguous the moment
+     * anything joins, and it 500s rather than filtering wrongly — which is the
+     * better failure, but only if it never ships. `getTable()` also carries
+     * the installation's table prefix, which a hand-written string would not.
+     */
+    public function scopeEntitled($query)
+    {
+        $ids = resolve(\ErnestDefoe\Garrison\Entitled::class)->serverIds();
+
+        if ($ids === null) {
+            return $query;
+        }
+
+        return $query->whereIn($this->getTable() . '.id', $ids);
+    }
+
+    /**
      * 🚨 EVERY datetime column belongs here, and a missing one is a fatal on
      * whichever code path first calls a Carbon method on it.
      *

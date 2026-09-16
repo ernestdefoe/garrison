@@ -4,14 +4,11 @@ import LinkButton from 'flarum/common/components/LinkButton';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import humanTime from 'flarum/common/helpers/humanTime';
 
-import Backups from './Backups';
 import Console from './Console';
-import Leaderboard from './Leaderboard';
-import LinkIdentity from './LinkIdentity';
 import ServerControls from './ServerControls';
-import Settings from './Settings';
 import { bytes } from '../format';
 import { serverMark } from '../marks';
+import { panelsFor } from '../panels';
 import { byId, isLoaded, lastError, subscribe } from '../store';
 
 /**
@@ -133,53 +130,34 @@ export default class ServerPage extends Page {
       this.facts(s, running),
 
       /*
-       * 🚨 Above the staff panels, because this is the only thing on this page
-       * an ordinary member can do. Burying it under the console and the backups
-       * — neither of which most visitors can even see — would put the one
-       * control aimed at them at the bottom of a page of controls that are not.
+       * 🚨 The console is FREE, and sits above whatever pro adds.
+       *
+       * It is half of what makes the free tier a real product rather than a
+       * demo — the other half being that Garrison tells you when a server has
+       * stopped accepting players. Arriving after an alert, the questions are
+       * "what is it doing" and then "what does the log say", and both of those
+       * must be answerable without paying.
        */
-      /*
-       * 🚨 The leaderboard sits with the players, above the staff controls.
-       * It is the part of this page a community reads; the console and the
-       * backups are the part an operator works from, and most visitors cannot
-       * see them at all.
-       */
-      <Leaderboard server={s} key="board" />,
-
-      <LinkIdentity server={s} key="link" />,
-
       s.canConsole ? <Console server={s} tall={true} key="console" /> : null,
 
       /*
-       * 🚨 Backups sit BELOW the console, not above it.
+       * 🚨 Everything garrison-pro adds goes here, in one place, BELOW the
+       * facts and ABOVE nothing.
        *
-       * The order is the order somebody works in. Arriving here after an
-       * alert, the questions are "what is it doing", then "what does the log
-       * say", and only then "do I need to put yesterday's world back". Putting
-       * a Restore button above the evidence invites somebody to use it before
-       * they have read anything — and it is the one control here that cannot
-       * be taken back.
-       */
-      /*
-       * 🚨 Shown when the API SENT a backup list, not when a flag says it
-       * should be. ListServersController omits the field entirely for anybody
-       * below staff, so its presence is the permission answer, already made
-       * server-side. A second client-side rule here would be a second place
-       * for the two to disagree — and the one that loses is always the one
-       * that hides things.
-       */
-      s.backups !== undefined ? <Backups server={s} key="backups" /> : null,
-
-      /*
-       * 🚨 Settings sit at the BOTTOM, below the backups.
+       * The order inside is pro's business (a panel declares its priority),
+       * but the position of the whole group is this page's: after the things
+       * every reader can see, because most of what pro adds — the console's
+       * neighbours, the backups, the settings editor — is for an operator, and
+       * burying the one control aimed at ordinary members underneath a stack
+       * of controls that are not would be the wrong way round.
        *
-       * The order is the order somebody works in, and it is also a safety
-       * ordering: by the time an operator reaches the settings they have seen
-       * the state, read the console and been shown that a backup exists. A
-       * config editor placed above all that invites changing a port number
-       * before anybody has looked at why the server is unhappy.
+       * On a free install this is an empty array and the page simply ends
+       * after the facts. It is not a locked panel, not an upsell and not a
+       * disabled button: a tier boundary that advertises itself on every
+       * server page would make the free tier feel like a trial, and it is not
+       * one.
        */
-      s.canConfig ? <Settings server={s} key="settings" /> : null,
+      ...panelsFor(s),
 
       /*
        * 🚨 `.filter(Boolean)`, AND IT IS LOAD-BEARING.

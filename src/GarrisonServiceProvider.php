@@ -7,14 +7,13 @@ use ErnestDefoe\Garrison\Agent\Gateway;
 use ErnestDefoe\Garrison\Agent\TokenGuard;
 use ErnestDefoe\Garrison\Api\Controller\AdminController;
 use ErnestDefoe\Garrison\Api\Controller\ConsoleController;
+use ErnestDefoe\Garrison\Entitled;
 use ErnestDefoe\Garrison\Game\Artwork;
 use ErnestDefoe\Garrison\Health\Ladder;
 use ErnestDefoe\Garrison\Notification\Alerts;
 use ErnestDefoe\Garrison\Health\Heartbeat;
 use ErnestDefoe\Garrison\Notification\Webhooks;
-use ErnestDefoe\Garrison\Players\Linker;
 use ErnestDefoe\Garrison\Players\Tracker;
-use ErnestDefoe\Garrison\Schedule\Runner;
 use Flarum\Foundation\AbstractServiceProvider;
 use Flarum\Locale\TranslatorInterface;
 use Illuminate\Contracts\Filesystem\Factory;
@@ -47,12 +46,6 @@ class GarrisonServiceProvider extends AbstractServiceProvider
             return new Tracker();
         });
 
-        $this->container->singleton(Linker::class, function ($container) {
-            return new Linker(
-                $container->make(Dispatcher::class),
-                $container->make(TranslatorInterface::class)
-            );
-        });
 
         $this->container->singleton(Gateway::class, function ($container) {
             return new Gateway(
@@ -61,8 +54,15 @@ class GarrisonServiceProvider extends AbstractServiceProvider
             );
         });
 
+        $this->container->singleton(Entitled::class, function ($container) {
+            return new Entitled($container->make(SettingsRepositoryInterface::class));
+        });
+
         $this->container->singleton(Dispatcher::class, function ($container) {
-            return new Dispatcher($container->make(TranslatorInterface::class));
+            return new Dispatcher(
+                $container->make(TranslatorInterface::class),
+                $container->make(Entitled::class)
+            );
         });
 
         $this->container->singleton(Webhooks::class, function ($container) {
@@ -98,12 +98,6 @@ class GarrisonServiceProvider extends AbstractServiceProvider
             );
         });
 
-        $this->container->singleton(Runner::class, function ($container) {
-            return new Runner(
-                $container->make(Dispatcher::class),
-                $container->make(LoggerInterface::class)
-            );
-        });
 
         $this->container->singleton(Ladder::class, function ($container) {
             return new Ladder(

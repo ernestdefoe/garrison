@@ -5,6 +5,8 @@ ernestdefoe-garrison:
       unknown_verb: That is not something Garrison can ask a server to do.
       not_permitted: You do not have permission to do that to this server.
       name_required: Give the host a name.
+      needs_pro: That is part of Garrison Pro. This forum is running the free edition, which covers one host and one server.
+      host_limit: "The free edition of Garrison covers {max} host. Garrison Pro removes the limit."
       upload_failed: That file did not arrive. Try again.
       not_an_image: That is not an image Garrison can use. PNG, JPEG, GIF or WebP.
       too_large: That image is over 512 KB. Use a smaller one.

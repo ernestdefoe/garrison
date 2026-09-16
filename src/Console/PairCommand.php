@@ -4,6 +4,7 @@ namespace ErnestDefoe\Garrison\Console;
 
 use Carbon\Carbon;
 use ErnestDefoe\Garrison\Agent\TokenGuard;
+use ErnestDefoe\Garrison\Edition;
 use ErnestDefoe\Garrison\Model\GarrisonAgent;
 use Flarum\Console\AbstractCommand;
 
@@ -36,6 +37,21 @@ class PairCommand extends AbstractCommand
      */
     protected function fire(): int
     {
+        /*
+         * 🚨 The CLI is a second door to the same room, and it has to be
+         * locked too. Enforcing a limit only in the admin panel means the cap
+         * is really "the UI does not offer it", which is the decorative
+         * control trap wearing a different hat — and here it would be the
+         * revenue boundary.
+         */
+        $max = Edition::maxHosts();
+
+        if ($max !== null && GarrisonAgent::query()->count() >= $max) {
+            $this->error('This edition of Garrison covers ' . $max . ' host. Uninstall an existing one, or install garrison-pro.');
+
+            return 1;
+        }
+
         $agent = new GarrisonAgent();
         $agent->name = (string) $this->input->getArgument('name');
         $agent->token_hash = ''; // replaced below, once the row has an id

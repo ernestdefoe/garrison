@@ -6,10 +6,11 @@ import LinkButton from 'flarum/common/components/LinkButton';
 import { GarrisonServer } from './models';
 import ServerIncidentNotification from './components/ServerIncidentNotification';
 import ServerList from './components/ServerList';
-import ProfilePlaytime from './components/ProfilePlaytime';
 import ServerPage from './components/ServerPage';
 import ServersPage from './components/ServersPage';
 import registerWidgetHosts from './hosts';
+import exposeApi from './api';
+import drainPanelQueue from './panels';
 import { hostedElsewhere } from './placement';
 
 /**
@@ -68,21 +69,21 @@ app.initializers.add('ernestdefoe-garrison', () => {
   });
 
   /*
-   * 🚨 On the profile, because that is where somebody looks somebody else up.
+   * 🚨 Pro's panels are collected BEFORE anything renders.
    *
-   * The link between a forum account and an in-game character is the whole
-   * reason this product lives in a forum rather than beside one, and a profile
-   * is where a community actually asks "who is this?". Rendering nothing at
-   * all for the many members with no linked character keeps it out of the way
-   * of everybody it does not concern.
+   * garrison-pro pushes onto a queue rather than calling in, because the two
+   * bundles are separate files and nothing orders them — see panels.js. This
+   * drains whatever is already there and makes later pushes register straight
+   * away, so it does not matter which of the two loaded first.
    */
-  extend('flarum/forum/components/UserCard', 'infoItems', function (items) {
-    const user = this.attrs.user;
-
-    if (!user) return;
-
-    items.add('garrison', <ProfilePlaytime user={user} />, -10);
-  });
+  /*
+   * 🚨 The API goes up BEFORE the queue is drained. A queued panel's view runs
+   * as soon as a page renders, and the first thing most of them do is reach for
+   * the shared store — publishing the surface afterwards would make that a race
+   * that only loses on a fast page load.
+   */
+  exposeApi();
+  drainPanelQueue();
 
   registerWidgetHosts(app, (host) => <ServerList host={host} />);
 

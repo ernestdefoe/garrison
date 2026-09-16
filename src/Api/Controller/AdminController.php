@@ -55,10 +55,6 @@ class AdminController implements RequestHandlerInterface
             'garrison.admin.server' => $this->updateServer($request),
             'garrison.admin.icon' => $this->uploadIcon($request),
             'garrison.admin.fetchIcon' => $this->fetchIcon($request),
-            'garrison.admin.scheduleCreate' => $this->createSchedule($request),
-            'garrison.admin.scheduleUpdate' => $this->updateSchedule($request),
-            'garrison.admin.scheduleDelete' => $this->deleteSchedule($request),
-            'garrison.admin.unlink' => $this->unlinkIdentity($request),
             default => new JsonResponse(['errors' => [['code' => 'not_found']]], 404),
         };
     }
@@ -111,8 +107,19 @@ class AdminController implements RequestHandlerInterface
              */
             'health' => $this->heartbeat->report(),
 
+            /*
+             * 🚨 Still listed here, on a free install too, and deliberately.
+             *
+             * Creating and editing scheduled work lives in garrison-pro; the
+             * rows themselves belong to the operator. Reporting them from the
+             * one admin endpoint means that removing pro leaves the schedules
+             * visible and plainly paused rather than vanished — a nightly
+             * restart that silently stopped existing is exactly the invisible
+             * failure this product exists to catch. On a forum that has never
+             * had pro this is simply an empty array.
+             */
             'schedules' => Schedule::query()->orderBy('server_id')->orderBy('at_minute')->get()
-                ->map(fn (Schedule $s) => $this->scheduleRow($s))->values()->all(),
+                ->map(fn (Schedule $s) => $s->toAdminArray())->values()->all(),
 
             /*
              * 🚨 Who is linked to whom, because somebody has to be able to
@@ -209,172 +216,7 @@ class AdminController implements RequestHandlerInterface
         return new JsonResponse(['ok' => true]);
     }
 
-    /**
-     * @return array<string, mixed>
-     */
-    protected function scheduleRow(Schedule $s): array
-    {
-        return [
-            'id' => $s->id,
-            'serverId' => $s->server_id,
-            'kind' => $s->kind,
-            'atMinute' => (int) $s->at_minute,
-            'days' => $s->days,
-            'timezone' => $s->timezone,
-            'payload' => $s->payload,
-            'warnMinutes' => (int) $s->warn_minutes,
-            'warnPayload' => $s->warn_payload,
-            'enabled' => (bool) $s->enabled,
-            'lastRunAt' => $s->last_run_at?->toIso8601String(),
-        ];
-    }
-
-    protected function createSchedule(ServerRequestInterface $request): ResponseInterface
-    {
-        $server = Server::query()->find((int) ($request->getQueryParams()['id'] ?? 0));
-
-        if ($server === null) {
-            return new JsonResponse(['errors' => [['code' => 'not_found']]], 404);
-        }
-
-        $schedule = new Schedule();
-        $schedule->server_id = $server->id;
-
-        /*
-         * 🚨 Created with a real default rather than empty, and DISABLED.
-         *
-         * A new row with at_minute 0 and no days would be a schedule that does
-         * nothing, or worse fires at midnight because the mask defaulted to
-         * every day — before the operator has finished filling it in. So it
-         * arrives as a sensible 05:00 daily restart, switched off, and nothing
-         * happens until somebody turns it on having read what it says.
-         */
-        $schedule->kind = 'restart';
-        $schedule->at_minute = 5 * 60;
-        $schedule->days = '1111111';
-        $schedule->timezone = $this->defaultTimezone();
-        $schedule->warn_minutes = 0;
-        $schedule->enabled = false;
-        $schedule->created_at = Carbon::now();
-        $schedule->updated_at = Carbon::now();
-        $schedule->save();
-
-        return new JsonResponse($this->scheduleRow($schedule), 201);
-    }
-
-    /**
-     * 🚨 The forum's own timezone if it has one, and UTC if it does not —
-     * never the PHP process's, which on a shared host is whatever the provider
-     * set and is not something the operator can see. A new schedule that
-     * quietly defaults to a zone nobody chose is how a restart lands at the
-     * wrong hour and reads as a bug.
-     */
-    protected function defaultTimezone(): string
-    {
-        $tz = (string) resolve(\Flarum\Settings\SettingsRepositoryInterface::class)->get('ernestdefoe-garrison.timezone');
-
-        return in_array($tz, timezone_identifiers_list(), true) ? $tz : 'UTC';
-    }
-
-    protected function updateSchedule(ServerRequestInterface $request): ResponseInterface
-    {
-        $schedule = Schedule::query()->find((int) ($request->getQueryParams()['id'] ?? 0));
-
-        if ($schedule === null) {
-            return new JsonResponse(['errors' => [['code' => 'not_found']]], 404);
-        }
-
-        $body = (array) ($request->getParsedBody() ?? []);
-
-        /**
-         * 🚨 VALIDATED HERE, not only in the browser.
-         *
-         * Every one of these fields ends up in date arithmetic that decides
-         * when somebody's server restarts. A minute of 9999 or a mask of
-         * "yes please" does not throw — it produces a schedule that never
-         * fires, or fires at a time nobody can explain, and the admin screen
-         * shows it sitting there looking configured. The browser's own checks
-         * are for helpfulness; these are the ones that hold.
-         */
-        if (array_key_exists('kind', $body)) {
-            $kind = (string) $body['kind'];
-            $schedule->kind = in_array($kind, Schedule::KINDS, true) ? $kind : $schedule->kind;
-        }
-
-        if (array_key_exists('atMinute', $body)) {
-            $schedule->at_minute = max(0, min(24 * 60 - 1, (int) $body['atMinute']));
-        }
-
-        if (array_key_exists('days', $body)) {
-            $days = preg_replace('/[^01]/', '', (string) $body['days']);
-            // A mask of the wrong length would index out of range in
-            // runsOn(); a mask of all zeroes is a schedule that can never
-            // fire, which is what `enabled = false` is for and is not what
-            // somebody dragging day toggles meant.
-            $schedule->days = strlen($days) === 7 && str_contains($days, '1') ? $days : $schedule->days;
-        }
-
-        if (array_key_exists('timezone', $body)) {
-            $tz = (string) $body['timezone'];
-            $schedule->timezone = in_array($tz, timezone_identifiers_list(), true) ? $tz : $schedule->timezone;
-        }
-
-        if (array_key_exists('warnMinutes', $body)) {
-            // Capped at four hours: a warning further out than that is not a
-            // warning, it is an announcement, and it would sit in a chat log
-            // long enough that the restart it mentions is a surprise anyway.
-            $schedule->warn_minutes = max(0, min(240, (int) $body['warnMinutes']));
-        }
-
-        foreach (['payload' => 'payload', 'warnPayload' => 'warn_payload'] as $in => $column) {
-            if (array_key_exists($in, $body)) {
-                $value = trim((string) $body[$in]);
-                $schedule->$column = $value === '' ? null : $value;
-            }
-        }
-
-        if (array_key_exists('enabled', $body)) {
-            $schedule->enabled = (bool) $body['enabled'];
-        }
-
-        $schedule->updated_at = Carbon::now();
-        $schedule->save();
-
-        return new JsonResponse($this->scheduleRow($schedule));
-    }
-
-    protected function deleteSchedule(ServerRequestInterface $request): ResponseInterface
-    {
-        $schedule = Schedule::query()->find((int) ($request->getQueryParams()['id'] ?? 0));
-
-        if ($schedule !== null) {
-            $schedule->delete();
-        }
-
-        return new JsonResponse(['ok' => true]);
-    }
-
-    /**
-     * 🚨 Removes the link, and nothing else.
-     *
-     * It does not delete the play sessions: those record what happened in the
-     * game, which is true whether or not a forum account is attached to it.
-     * Deleting them would rewrite the server's leaderboard because somebody's
-     * forum link was wrong, and the next person to link that name would find
-     * their history had been thrown away.
-     */
-    protected function unlinkIdentity(ServerRequestInterface $request): ResponseInterface
-    {
-        $identity = Identity::query()->find((int) ($request->getQueryParams()['id'] ?? 0));
-
-        if ($identity !== null) {
-            $identity->delete();
-        }
-
-        return new JsonResponse(['ok' => true]);
-    }
-
-    /**
+          /**
      * Server settings an operator owns — as opposed to the ones the agent
      * reports, which are never editable here.
      */
