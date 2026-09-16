@@ -65,6 +65,14 @@ type Preset struct {
 They are different numbers, and using the game's id installs something that
 cannot run headless — the failure arrives as a missing binary long after a
 multi-gigabyte download, which is the most expensive way possible to learn it.
+
+Every id below was checked against Valve on 2026-09-16 with
+
+    steamcmd +login anonymous +app_info_print <id> +quit
+
+and each returned a name ending in "Dedicated Server". Do the same for anything
+added here: the tests below can prove an id is PRESENT and well-formed, but no
+offline test can prove it is the right number.
 */
 var presets = []Preset{
 	{
