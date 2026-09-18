@@ -432,7 +432,7 @@ func TestUnrealWillNotMatchAHostileName(t *testing.T) {
 		// A name trying to close its own line and open another.
 		"[2026.09.18-20.00.11:000][ 61]LogGarrison: player left: alice extra",
 		// Over the length cap.
-		"[2026.09.18-20.00.12:000][ 62]LogGarrison: player joined: " + strings.Repeat("c", 33),
+		"[2026.09.18-20.00.12:000][ 62]LogGarrison: player joined: "+strings.Repeat("c", 33),
 	)
 
 	if got := strings.Join(w.Online(), ","); got != "alice" {
