@@ -91,6 +91,14 @@ func main() {
 	// an agent nobody will let auto-update.
 	defer processDriver.Shutdown()
 
+	/*
+	 * 🚨 Runs BEFORE the detach above (defers unwind last-first), and that is
+	 * the order that matters: an install still writing the config file has to
+	 * finish before the command returns, whereas the games it installed are
+	 * meant to be left running.
+	 */
+	defer ag.Shutdown()
+
 	// The scheme picks the transport. Polling is the default because it needs
 	// nothing on the forum host but Flarum itself; websocket needs a gateway
 	// daemon there and exists as an upgrade, not a requirement.
