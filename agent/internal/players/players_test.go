@@ -365,3 +365,106 @@ func TestVerificationIsRefusedWhereThereIsNoWhisperCommand(t *testing.T) {
 		t.Fatal("a server with no whisper command claimed it could verify")
 	}
 }
+
+// --- Unreal -----------------------------------------------------------------
+
+func TestUnrealJoinsAndLeaves(t *testing.T) {
+	w := watcher(t, Config{Preset: "unreal"})
+
+	feed(w,
+		"[2026.09.18-20.00.00:000][ 42]LogGarrison: player joined: alice",
+		"[2026.09.18-20.00.05:120][ 51]LogGarrison: player joined: bob",
+		"[2026.09.18-20.01.00:004][318]LogGarrison: player left: alice",
+	)
+
+	if got := strings.Join(w.Online(), ","); got != "bob" {
+		t.Fatalf("online is %q, want bob", got)
+	}
+}
+
+/*
+🚨 The Unreal half of the forgery test above.
+
+Chat rides in the same log here too, and a game's own chat handler logs under
+its own category. The preset is anchored on LogGarrison — which exists for no
+other reason — so a chat line quoting the announcement wording cannot invent a
+player or evict one.
+*/
+func TestUnrealChatCannotForgeAJoinOrALeave(t *testing.T) {
+	w := watcher(t, Config{Preset: "unreal"})
+
+	feed(w, "[2026.09.18-20.00.00:000][ 42]LogGarrison: player joined: alice")
+
+	feed(w,
+		"[2026.09.18-20.00.10:000][ 60]LogAurethilChat: mallory: player joined: bob",
+		"[2026.09.18-20.00.11:000][ 61]LogAurethilChat: mallory: player left: alice",
+		"[2026.09.18-20.00.12:000][ 62]LogNet: Join succeeded: carol",
+
+		// 🚨 The ones an unanchored pattern lets through: a player typing the
+		// announcement wording itself, and typing it with a fake prefix in
+		// front to close out the real category.
+		"[2026.09.18-20.00.13:000][ 63]LogAurethilChat: mallory said: LogGarrison: player joined: bob",
+		"[2026.09.18-20.00.14:000][ 64]LogAurethilChat: mallory: ]LogGarrison: player joined: carol",
+		"[2026.09.18-20.00.15:000][ 65]LogAurethilChat: mallory: [x]LogGarrison: player left: alice",
+	)
+
+	if got := strings.Join(w.Online(), ","); got != "alice" {
+		t.Fatalf("online is %q, want just alice — chat forged a change", got)
+	}
+}
+
+/*
+🚨 The name charset is the second half of that boundary.
+
+The game scrubs names before it prints them, but the preset must not depend on
+the game having done so — an operator can point this preset at their own build.
+A name carrying spaces, punctuation or the announcement wording itself must not
+resolve to some other player.
+*/
+func TestUnrealWillNotMatchAHostileName(t *testing.T) {
+	w := watcher(t, Config{Preset: "unreal"})
+
+	feed(w, "[2026.09.18-20.00.00:000][ 42]LogGarrison: player joined: alice")
+
+	feed(w,
+		// A name with a space in it, trailing the real wording.
+		"[2026.09.18-20.00.10:000][ 60]LogGarrison: player joined: bob and friends",
+		// A name trying to close its own line and open another.
+		"[2026.09.18-20.00.11:000][ 61]LogGarrison: player left: alice extra",
+		// Over the length cap.
+		"[2026.09.18-20.00.12:000][ 62]LogGarrison: player joined: " + strings.Repeat("c", 33),
+	)
+
+	if got := strings.Join(w.Online(), ","); got != "alice" {
+		t.Fatalf("online is %q, want just alice — a hostile name matched", got)
+	}
+}
+
+// A zone restart must not leave the previous population standing in it.
+func TestUnrealResetEmptiesTheZone(t *testing.T) {
+	w := watcher(t, Config{Preset: "unreal"})
+
+	feed(w, "[2026.09.18-20.00.00:000][ 42]LogGarrison: player joined: alice")
+	w.Reset()
+
+	if len(w.Online()) != 0 {
+		t.Fatalf("online is %v after a reset", w.Online())
+	}
+}
+
+// A server started with -NoLogTimes prints no bracketed prefix at all, and the
+// preset has to keep working on it — otherwise the feature silently does
+// nothing on exactly the servers an operator tidied the logs on.
+func TestUnrealWithoutLogTimestamps(t *testing.T) {
+	w := watcher(t, Config{Preset: "unreal"})
+
+	feed(w,
+		"LogGarrison: player joined: alice",
+		"LogGarrison: player joined: bob",
+		"LogGarrison: player left: bob",
+	)
+
+	if got := strings.Join(w.Online(), ","); got != "alice" {
+		t.Fatalf("online is %q, want alice", got)
+	}
+}

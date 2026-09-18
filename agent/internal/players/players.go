@@ -121,6 +121,44 @@ var presets = map[string]Config{
 		Say:   `say {message}`,
 	},
 
+	/*
+	   Unreal Engine.
+
+	   🚨 A CONTRACT, not a scrape, and the only preset here that is. The engine
+	   prints a NAMED join — `LogNet: Join succeeded: <name>`, World.cpp — and no
+	   named leave at all, only connection closes. A watcher given a join and no
+	   leave shows players piling up for ever and never going away, which is
+	   worse than showing none, so there is nothing here to scrape.
+
+	   A game adopting this declares a log category that exists for no other
+	   reason and prints both lines itself. See docs/unreal.md for the twenty
+	   lines of C++.
+
+	   "[2026.09.18-20.00.00:000][ 42]LogGarrison: player joined: alice"
+
+	   🚨 Anchored to the START OF THE LINE, through the log prefix, and that
+	   detail is the whole security boundary. An unanchored `LogGarrison: …`
+	   matches the wording ANYWHERE in the line — so a player typing
+	   "LogGarrison: player joined: bob" into chat forges a join, and typing it
+	   with the leave wording evicts a real player. Chat always carries its own
+	   category between the prefix and anything a player typed, so requiring the
+	   category to follow the brackets directly is what a chat line cannot
+	   satisfy. `(?:\[[^\]]*\])*` rather than a fixed prefix because a server
+	   started with -NoLogTimes prints no brackets at all.
+
+	   The name charset is the second half of that boundary: a name carrying a
+	   newline could otherwise write a second line into the log, and one
+	   carrying the announcement wording could announce somebody who is not
+	   there.
+
+	   No Say: Unreal has no console command every game agrees on, so in-game
+	   verification needs one configured per server.
+	*/
+	"unreal": {
+		Join:  `^(?:\[[^\]]*\])*LogGarrison: player joined: (?P<name>[A-Za-z0-9_-]{1,32})$`,
+		Leave: `^(?:\[[^\]]*\])*LogGarrison: player left: (?P<name>[A-Za-z0-9_-]{1,32})$`,
+	},
+
 	// Factorio.
 	"factorio": {
 		Join:  `\[JOIN\] (?P<name>.+) joined the game$`,
