@@ -20,7 +20,15 @@ jobs:
         working-directory: agent
         run: |
           unformatted=$(gofmt -l .)
-          if [ -n "$unformatted" ]; then echo "$unformatted"; exit 1; fi
+          if [ -n "$unformatted" ]; then
+            echo "$unformatted"
+            # A list of filenames does not say what is WRONG with them, so the
+            # only way to find out has been to install Go and run gofmt by hand.
+            # Printing the diff lets the log answer the question on its own.
+            echo
+            gofmt -d .
+            exit 1
+          fi
 
       - run: go vet ./...
         working-directory: agent
