@@ -80,6 +80,18 @@ class Catalog
         'vrising' => 9876,
         'dayz' => 2302,
         'gmod' => 27015,
+
+        /*
+         * Not a game — the engine, for a dedicated server that is somebody's
+         * own Unreal project rather than a title in the list above.
+         *
+         * 🚨 Deliberately absent from GAMES. That constant exists to fetch a
+         * game's own artwork, and an engine has no store page to fetch one
+         * from; an entry there would only put Epic's trade mark on a page that
+         * is not about their product. name() and steamAppId() already return
+         * null for an unknown key, so the page simply shows no logo.
+         */
+        'unreal' => 7777,
     ];
 
     /** The usual port for a game, or null when Garrison does not know one. */
