@@ -60,6 +60,25 @@ type Agent struct {
 	ctx context.Context
 
 	/*
+	 * The work the agent started that outlives the request that began it: an
+	 * install running in the background, a console being followed.
+	 *
+	 * 🚨 COUNTED, so shutdown can wait for it rather than walk away from it.
+	 *
+	 * runInstall creates the install directory, writes the operator's config
+	 * file and then the agent's own maps. A process that stops in the middle
+	 * of that leaves a config which is neither the old one nor the new one,
+	 * and a directory half full of a game nobody asked to keep. The goroutine
+	 * has to outlive its request; it must not outlive the agent.
+	 *
+	 * The tests found this before a host did. An install goroutine still
+	 * creating its directory after the test that started it had returned
+	 * raced t.TempDir's removal of that directory, and the test failed in
+	 * cleanup — one run in eight, with an error that named no code of ours.
+	 */
+	background sync.WaitGroup
+
+	/*
 	 * Which DRIVERS this host cannot run, kept so `--check` can report them.
 	 *
 	 * 🚨 Remembered rather than only returned from New(): the preflight report
@@ -87,7 +106,43 @@ it holds the current set, and rebuilding it every poll would empty it every
 fifteen seconds and report an empty game.
 */
 func (a *Agent) watcher(serverID string) *players.Watcher {
+	/*
+	 * 🚨 Locked, because a finished install adds to this map from its own
+	 * goroutine while a poll is reading it. An unguarded map read against a
+	 * concurrent write is not a stale answer, it is a fatal runtime error
+	 * that takes the whole agent — and every server it was watching — down.
+	 */
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
 	return a.watchers[serverID]
+}
+
+// server looks one server up by id.
+func (a *Agent) server(id string) (driver.Server, bool) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	s, ok := a.servers[id]
+
+	return s, ok
+}
+
+// serverList snapshots the servers this agent knows about.
+//
+// 🚨 A copy, taken under the lock, rather than the map itself. Callers iterate
+// it while an install may be registering a new server, and ranging over the
+// live map from outside the lock is the same fatal error as reading it.
+func (a *Agent) serverList() []driver.Server {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	out := make([]driver.Server, 0, len(a.servers))
+	for _, s := range a.servers {
+		out = append(out, s)
+	}
+
+	return out
 }
 
 // New builds an agent over the servers it is configured with, keeping only
@@ -181,7 +236,7 @@ func (a *Agent) Handle(ctx context.Context, req protocol.Request, emit Emit) pro
 	)
 	if protocol.NeedsServer(req.Verb) {
 		var ok bool
-		srv, ok = a.servers[req.Server]
+		srv, ok = a.server(req.Server)
 		if !ok {
 			res.Error = protocol.Errf(protocol.CodeUnknownServer, "no server %q on this agent", req.Server)
 			return res
@@ -233,12 +288,14 @@ func (a *Agent) dispatch(ctx context.Context, req protocol.Request, srv driver.S
 			Arch:    runtime.GOARCH,
 			Drivers: a.drivers.Names(),
 			Verbs:   verbs,
-			Servers: len(a.servers),
+			Servers: len(a.serverList()),
 		}, nil
 
 	case protocol.VerbServerList:
-		out := make([]map[string]string, 0, len(a.servers))
-		for _, s := range a.servers {
+		servers := a.serverList()
+
+		out := make([]map[string]string, 0, len(servers))
+		for _, s := range servers {
 			out = append(out, map[string]string{"id": s.ID, "name": s.Name, "driver": s.Driver})
 		}
 		return out, nil
@@ -532,7 +589,11 @@ func (a *Agent) tail(ctx context.Context, req protocol.Request, srv driver.Serve
 	a.streams[req.ID] = cancel
 	a.mu.Unlock()
 
+	a.background.Add(1)
+
 	go func() {
+		defer a.background.Done()
+
 		defer func() {
 			a.mu.Lock()
 			delete(a.streams, req.ID)
@@ -574,6 +635,26 @@ func (a *Agent) CancelAll() {
 		cancel()
 		delete(a.streams, id)
 	}
+}
+
+/*
+Shutdown ends the streams and waits for everything the agent started in the
+background to finish.
+
+🚨 An install in flight is WAITED FOR, not abandoned. It is the one piece of
+background work that writes files — the install directory, then the operator's
+config — and a process that exits partway through that leaves the operator with
+a config file that parses as neither the agent they had nor the one they were
+getting.
+
+How long that wait can be is set by the context the agent was built with, not
+by this: cancelling it kills steamcmd and aborts the download, so the install
+returns its error within moments. The command's signal handler does exactly
+that, which is what makes this a wait of milliseconds rather than of hours.
+*/
+func (a *Agent) Shutdown() {
+	a.CancelAll()
+	a.background.Wait()
 }
 
 /*
@@ -624,7 +705,19 @@ func (a *Agent) provision(ctx context.Context, p protocol.ProvisionParams, emit 
 	a.installing[server.ID] = struct{}{}
 	a.mu.Unlock()
 
-	go a.runInstall(server, tpl, emit)
+	/*
+	 * 🚨 Counted into a.background BEFORE the goroutine starts, never inside
+	 * it. An Add() that runs after the `go` races the Wait() it exists to be
+	 * seen by, so a shutdown arriving in that window walks away from an
+	 * install it was supposed to wait for — which is the bug itself, back.
+	 */
+	a.background.Add(1)
+
+	go func() {
+		defer a.background.Done()
+
+		a.runInstall(server, tpl, emit)
+	}()
 
 	return map[string]any{"started": true, "server": server.ID}, nil
 }
@@ -694,13 +787,26 @@ func (a *Agent) runInstall(server driver.Server, tpl provision.Template, emit Em
 		return
 	}
 
+	w, werr := players.New(server.Players)
+
+	/*
+	 * 🚨 Both maps under ONE lock, and the watcher under a lock at all.
+	 *
+	 * This runs on the install's own goroutine, and the very next poll reads
+	 * both maps from another. The servers map was already guarded here and the
+	 * watchers map was not, which is the worse half of the same bug: a poll
+	 * landing in that window reads a map mid-write and the Go runtime stops
+	 * the process outright. Taken together so the two can never be seen
+	 * disagreeing either — a server in the list whose watcher has not arrived
+	 * yet reports an empty game for one poll.
+	 */
 	a.mu.Lock()
 	a.servers[server.ID] = server
-	a.mu.Unlock()
 
-	if w, werr := players.New(server.Players); werr == nil && w != nil {
+	if werr == nil && w != nil {
 		a.watchers[server.ID] = w
 	}
+	a.mu.Unlock()
 
 	say("%s is installed and ready to start", server.ID)
 }
@@ -868,9 +974,11 @@ func (a *Agent) Drivers() []string { return a.drivers.Names() }
 // might be asleep — which is what lets ten widgets on a page cost one query
 // instead of ten requests.
 func (a *Agent) StatusAll(ctx context.Context) []protocol.Status {
-	out := make([]protocol.Status, 0, len(a.servers))
+	servers := a.serverList()
 
-	for _, s := range a.servers {
+	out := make([]protocol.Status, 0, len(servers))
+
+	for _, s := range servers {
 		drv, ok := a.drivers[s.Driver]
 		if !ok {
 			out = append(out, protocol.Status{

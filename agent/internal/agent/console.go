@@ -72,7 +72,7 @@ func newConsoleShipper() *consoleShipper {
 func (c *consoleShipper) collect(ctx context.Context, a *Agent) []protocol.Line {
 	var out []protocol.Line
 
-	for _, s := range a.servers {
+	for _, s := range a.serverList() {
 		drv, ok := a.drivers[s.Driver]
 		if !ok {
 			continue

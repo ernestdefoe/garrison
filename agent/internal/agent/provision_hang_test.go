@@ -56,12 +56,33 @@ func TestProvisionInstallAlwaysAnswers(t *testing.T) {
 			tpl := c.tpl
 			tpl.InstallRoot = t.TempDir()
 
-			a, err := New(context.Background(),
+			/*
+			 * 🚨 The install is CANCELLED AND WAITED FOR before the directory
+			 * it writes into is removed.
+			 *
+			 * The agent answers this verb by starting the install on its own
+			 * goroutine, so the handler returns while a download is still
+			 * going. Left alone, that goroutine is still creating
+			 * InstallRoot/newone as t.TempDir's cleanup deletes it, and the
+			 * test fails with "directory not empty" — no assertion of its
+			 * own, one run in eight, pointing at nothing.
+			 *
+			 * Cleanups run in reverse order of registration, which is why
+			 * Shutdown is registered AFTER t.TempDir() rather than before:
+			 * later registration means it runs first, and the directory
+			 * outlives the last write into it.
+			 */
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			a, err := New(ctx,
 				[]driver.Server{{ID: "existing", Name: "Existing", Driver: "fake"}},
 				driver.Set{"fake": &fakeDriver{name: "fake"}})
 			if err != nil {
 				t.Fatal(err)
 			}
+
+			t.Cleanup(a.Shutdown)
 
 			a.Provisioning([]provision.Template{tpl}, func(driver.Server) error { return nil })
 

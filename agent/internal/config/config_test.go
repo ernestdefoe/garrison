@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/ernestdefoe/garrison/internal/driver"
+	"github.com/ernestdefoe/garrison/internal/health"
 	"github.com/ernestdefoe/garrison/internal/provision"
 )
 
@@ -353,5 +354,57 @@ func TestCatalogNeedsAnInstallRoot(t *testing.T) {
 
 	if _, err := Load(path); err == nil {
 		t.Fatal("a catalogue with no installRoot has nowhere to put a server")
+	}
+}
+
+/*
+🚨 A probe missing the field its type needs checks NOTHING — and a probe that
+checks nothing reports healthy. The operator sees a configured safeguard and
+believes something is watching.
+
+This is the "decorative control" trap: built, named, configured, and wired to
+nothing. Caught at load, where it is one line in a file, rather than at 3am.
+*/
+func TestProbesMissingTheirFieldsAreRefused(t *testing.T) {
+	cases := map[string]health.Probe{
+		"a tcp probe with no port":       {Name: "port", Type: "tcp"},
+		"a udp_recvq probe with no port": {Name: "queue", Type: "udp_recvq"},
+		"a log_match with no pattern":    {Name: "crash", Type: "log_match"},
+		"a log_quiet with no pattern":    {Name: "beat", Type: "log_quiet"},
+		"a probe with no type at all":    {Name: "nameless"},
+	}
+
+	for what, probe := range cases {
+		c := Config{
+			ForumURL: "http://127.0.0.1/api",
+			Token:    "t",
+			Servers: []driver.Server{{
+				ID: "s", Driver: "docker", Container: "c",
+				Health: []health.Probe{probe},
+			}},
+		}
+		if err := c.Validate(); err == nil {
+			t.Errorf("accepted %s — it would have reported healthy for ever", what)
+		}
+	}
+}
+
+// And a correctly configured probe is still accepted, so the check above is
+// refusing the mistake rather than the feature.
+func TestWellFormedProbesAreAccepted(t *testing.T) {
+	c := Config{
+		ForumURL: "http://127.0.0.1/api",
+		Token:    "t",
+		Servers: []driver.Server{{
+			ID: "s", Driver: "docker", Container: "c",
+			Health: []health.Probe{
+				{Name: "game port", Type: "tcp", Port: 25565},
+				{Name: "socket", Type: "udp_recvq", Port: 7777, Threshold: 65536},
+				{Name: "crash", Type: "log_match", Pattern: "OutOfMemoryError"},
+			},
+		}},
+	}
+	if err := c.Validate(); err != nil {
+		t.Fatalf("refused a well-formed config: %v", err)
 	}
 }

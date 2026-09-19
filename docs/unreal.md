@@ -112,16 +112,35 @@ collides with the first and un-announces them on leave.
 
 ## Health
 
-Unreal gives you nothing standard to health-check, so use a line your own
-startup prints once the server is genuinely serving:
+🚨 **Do not reach for `log_match` here.** It fails when the pattern IS
+PRESENT — it is for crash signatures, not for readiness. A probe matching
+`"Zone ready on "` therefore reports a server unhealthy *because it finished
+starting*, which is the exact opposite of the intent.
+
+An earlier version of this page recommended precisely that. It was wrong.
+
+Matching a startup line is a bad idea for a second reason anyway: startup lines
+do not survive log rotation. The line scrolls away, the probe stops finding it,
+and the server reports unhealthy for ever while running perfectly. That is not
+hypothetical — it happened to a Minecraft server whose Docker health check
+grepped for `Done (`.
+
+Use a socket probe. It asks the only question that matters — will this server
+take a player right now — and it keeps answering for as long as the server runs.
 
 ```json
 "health": [
-  { "name": "the zone is accepting players",
-    "type": "log_match", "pattern": "Zone ready on ", "within": "5m", "threshold": 1 }
+  { "name": "the zone is draining its socket",
+    "type": "udp_recvq", "port": 7777, "threshold": 65536 }
 ]
 ```
 
-🚨 Match something that means *ready*, not something that means *started*. A
-pattern matching an early boot line reports healthy on a server that is still
-loading and will refuse every connection it gets.
+🚨 `udp_recvq`, not `tcp`. Unreal's net driver is **UDP**, so there is no
+connection to make and nothing for a TCP probe to find — `ss -ltn` will show
+you nothing on the game port no matter how healthy the server is. What this
+watches is whether the server is *draining* its socket: a backed-up receive
+queue is a server that has stopped ticking while still holding the port, which
+is the failure a process-alive check misses completely.
+
+If you do want a log probe as well, `log_quiet` is the one that fails on
+ABSENCE — but give it a line the server repeats, never one it prints once.

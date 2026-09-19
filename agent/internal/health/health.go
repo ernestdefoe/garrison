@@ -174,7 +174,15 @@ func run(ctx context.Context, p Probe, logs LogSource) Result {
 		r.OK, r.Detail, r.Skipped = ok, detail, skipped
 
 	case "tcp":
-		r.OK, r.Detail = tcpConnect(ctx, p.Port)
+		// 🚨 Skipped, not passed. A probe with no port checks nothing, and
+		// reporting it healthy makes a typo look like a working safeguard —
+		// the operator believes something is watching when nothing is.
+		if p.Port == 0 {
+			r.Skipped = true
+			r.Detail = "no port configured"
+		} else {
+			r.OK, r.Detail = tcpConnect(ctx, p.Port)
+		}
 
 	case "log_match":
 		// Fails when the pattern IS present: a known crash signature.
