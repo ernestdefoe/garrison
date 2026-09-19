@@ -45,6 +45,7 @@ func main() {
 	processDriver := driver.NewProcess()
 	candidates := driver.Set{
 		"docker":  driver.NewDocker(),
+		"systemd": driver.NewSystemd(),
 		"process": processDriver,
 	}
 

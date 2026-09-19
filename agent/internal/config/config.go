@@ -239,13 +239,20 @@ func (c *Config) Validate() error {
 			if s.Command == "" {
 				return fmt.Errorf("server %q uses the process driver but has no command", s.ID)
 			}
+		case "systemd":
+			// 🚨 The unit is the whole configuration for this driver. Without it
+			// the agent would start nothing and report nothing, and the operator
+			// would be reading logs to find a missing line in a file.
+			if strings.TrimSpace(s.Unit) == "" {
+				return fmt.Errorf("server %q uses the systemd driver but has no unit", s.ID)
+			}
 		case "":
 			return fmt.Errorf("server %q has no driver", s.ID)
 		default:
-			// Naming systemd or service here is not a typo — they are real
-			// drivers, just not in this phase. Say which, rather than
-			// "unknown driver", so the operator knows to wait rather than to
-			// go looking for their mistake.
+			// Naming `service` here is not a typo — it is a real driver, just
+			// not in this phase. Say which, rather than "unknown driver", so
+			// the operator knows to wait rather than to go looking for their
+			// mistake.
 			return fmt.Errorf("server %q wants the %q driver, which this agent does not implement yet", s.ID, s.Driver)
 		}
 	}
