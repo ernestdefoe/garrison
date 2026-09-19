@@ -257,6 +257,34 @@ func (c *Config) Validate() error {
 		}
 	}
 
+	for _, s := range c.Servers {
+		for _, h := range s.Health {
+			/*
+			 * 🚨 A probe missing the field its type needs checks NOTHING, and
+			 * a probe that checks nothing reports healthy. The operator sees a
+			 * configured safeguard and believes something is watching.
+			 *
+			 * So a mistake is refused at load, where it is one line in a file,
+			 * rather than at 3am when the thing it was supposed to catch
+			 * happens and nobody was looking.
+			 */
+			switch h.Type {
+			case "tcp", "udp_recvq":
+				if h.Port == 0 {
+					return fmt.Errorf("server %q has a %q probe %q with no port",
+						s.ID, h.Type, h.Name)
+				}
+			case "log_match", "log_quiet":
+				if strings.TrimSpace(h.Pattern) == "" {
+					return fmt.Errorf("server %q has a %q probe %q with no pattern",
+						s.ID, h.Type, h.Name)
+				}
+			case "":
+				return fmt.Errorf("server %q has a health probe %q with no type", s.ID, h.Name)
+			}
+		}
+	}
+
 	seenTemplate := map[string]bool{}
 
 	for i, t := range c.Templates {
