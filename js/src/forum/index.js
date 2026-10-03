@@ -2,6 +2,7 @@ import app from 'flarum/forum/app';
 import { extend } from 'flarum/common/extend';
 
 import LinkButton from 'flarum/common/components/LinkButton';
+import IndexPage from 'flarum/forum/components/IndexPage';
 
 import { GarrisonServer } from './models';
 import ServerIncidentNotification from './components/ServerIncidentNotification';
@@ -107,6 +108,10 @@ app.initializers.add('ernestdefoe-garrison', () => {
      * for a copy that does not exist. Two copies is a bug you can see; zero
      * copies is one you cannot.
      */
+    // 🚨 The discussion list only. Flarum 2 reuses IndexSidebar for other
+    // pages (Messages subclasses it), which lay the list out as a row, and a
+    // box dropped in there pushes the whole page out of shape.
+    if (!app.current || !app.current.matches(IndexPage)) return;
     if (hostedElsewhere()) return;
 
     items.add(
