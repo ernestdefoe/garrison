@@ -7,7 +7,7 @@ import humanTime from 'flarum/common/helpers/humanTime';
 
 import Console from './Console';
 import ServerControls from './ServerControls';
-import { bytes } from '../format';
+import { bytes, driverLabel, stateLabel } from '../format';
 import { serverMark } from '../marks';
 import { all, isLoaded, lastError, subscribe } from '../store';
 
@@ -99,7 +99,7 @@ export default class ServersPage extends Page {
             </a>
           </h3>
           <span className="GarrisonCard-state">
-            {app.translator.trans(`ernestdefoe-garrison.forum.state.${s.state}`)}
+            {stateLabel(s.state)}
           </span>
           <ServerControls server={s} />
         </div>
@@ -133,7 +133,7 @@ export default class ServersPage extends Page {
           {this.fact('cpu', running && s.cpuPercent != null ? `${s.cpuPercent}%` : null)}
           {this.fact('memory', running && s.memoryBytes != null ? bytes(s.memoryBytes) + (s.statsApproximate ? ' ≈' : '') : null)}
           {this.fact('uptime', running && s.runningSince ? humanTime(s.runningSince) : null)}
-          {this.fact('driver', s.driver)}
+          {this.fact('driver', driverLabel(s.driver))}
         </dl>
 
         {s.canConsole ? (

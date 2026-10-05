@@ -3,6 +3,7 @@ import Component from 'flarum/common/Component';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import humanTime from 'flarum/common/helpers/humanTime';
 
+import { stateLabel } from '../format';
 import { serverMark } from '../marks';
 import { claim, release, SIDEBAR } from '../placement';
 import { all, isLoaded, lastError, subscribe } from '../store';
@@ -154,6 +155,6 @@ export default class ServerList extends Component {
       return app.translator.trans('ernestdefoe-garrison.forum.players', { count: s.playersOnline });
     }
 
-    return app.translator.trans(`ernestdefoe-garrison.forum.state.${s.state}`);
+    return stateLabel(s.state);
   }
 }

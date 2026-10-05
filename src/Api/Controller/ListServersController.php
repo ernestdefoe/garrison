@@ -110,6 +110,9 @@ class ListServersController implements RequestHandlerInterface
                 'autoRemediate' => (bool) $server->auto_remediate,
 
                 'game' => $server->game,
+                // The game's own name ("Minecraft: Bedrock Edition"), so the
+                // page never shows the catalogue id ("minecraft-bedrock").
+                'gameName' => Catalog::name($server->game),
 
                 /*
                  * 🚨 The usual port for this GAME, not a claim about this

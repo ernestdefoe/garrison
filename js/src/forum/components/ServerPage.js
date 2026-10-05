@@ -6,7 +6,7 @@ import humanTime from 'flarum/common/helpers/humanTime';
 
 import Console from './Console';
 import ServerControls from './ServerControls';
-import { bytes } from '../format';
+import { bytes, driverLabel, stateLabel, transOrNull } from '../format';
 import { serverMark } from '../marks';
 import { panelsFor } from '../panels';
 import { byId, isLoaded, lastError, subscribe } from '../store';
@@ -110,7 +110,7 @@ export default class ServerPage extends Page {
           <h1 className="GarrisonServerPage-name">{s.name}</h1>
           <div className="GarrisonServerPage-state">
             <span className={`GarrisonServer-state GarrisonServer-state--${s.state}`} aria-hidden="true" />
-            {app.translator.trans(`ernestdefoe-garrison.forum.state.${s.state}`)}
+            {stateLabel(s.state)}
             {stale ? (
               <span className="GarrisonServerPage-staleNote">
                 {app.translator.trans('ernestdefoe-garrison.forum.stale', {
@@ -288,7 +288,8 @@ export default class ServerPage extends Page {
    * stop.
    */
   join(s) {
-    const steps = s.game ? app.translator.trans(`ernestdefoe-garrison.forum.connect.${s.game}`, {
+    // A game with no written instructions gets none, not the raw key.
+    const steps = s.game ? transOrNull(`ernestdefoe-garrison.forum.connect.${s.game}`, {
       address: <code>{s.joinAddress || this.addressHint(s)}</code>,
     }) : null;
 
@@ -353,8 +354,8 @@ export default class ServerPage extends Page {
         {this.fact('cpu', running && s.cpuPercent != null ? `${s.cpuPercent}%` : null)}
         {this.fact('memory', running && s.memoryBytes != null ? bytes(s.memoryBytes) + (s.statsApproximate ? ' ≈' : '') : null)}
         {this.fact('uptime', running && s.runningSince ? humanTime(s.runningSince) : null)}
-        {this.fact('driver', s.driver)}
-        {this.fact('game', s.game)}
+        {this.fact('driver', driverLabel(s.driver))}
+        {this.fact('game', s.gameName || s.game)}
       </dl>
     );
   }

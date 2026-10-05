@@ -56,3 +56,40 @@ export function duration(seconds) {
     minutes,
   });
 }
+
+/**
+ * 🚨 The server's state, through a CLOSED set.
+ *
+ * The state is whatever the agent reported, stored verbatim. Today's agent
+ * normalises to these six, but an older or hand-rolled agent can send anything,
+ * and interpolating it straight into a key printed the raw
+ * `ernestdefoe-garrison.forum.state.paused` on the card, the page and the
+ * sidebar. Anything outside the set reads as "Unknown", which is the truth.
+ */
+const STATES = ['running', 'stopped', 'starting', 'stopping', 'crashed', 'unknown'];
+
+export function stateLabel(state) {
+  return app.translator.trans(`ernestdefoe-garrison.forum.state.${STATES.includes(state) ? state : 'unknown'}`);
+}
+
+/**
+ * A translation, or null when the locale has no such key — for keys composed
+ * from data (a game id, a driver name) where a miss must render NOTHING rather
+ * than the key. Flarum's translator hands back the id itself on a miss.
+ */
+export function transOrNull(key, params) {
+  const out = app.translator.trans(key, params);
+
+  return out === key ? null : out;
+}
+
+/**
+ * How the agent runs the server, in words. The three drivers are named in the
+ * locale; an id the locale does not know (a future driver) is shown as the
+ * identifier it is, never as a translation key.
+ */
+export function driverLabel(driver) {
+  if (!driver) return null;
+
+  return transOrNull(`ernestdefoe-garrison.forum.driver.${driver}`) || driver;
+}

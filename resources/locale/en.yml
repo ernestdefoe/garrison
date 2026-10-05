@@ -163,6 +163,24 @@ ernestdefoe-garrison:
       driver: Runs as
       game: Game
 
+    # How the agent runs a server — the value beside "Runs as".
+    driver:
+      docker: Docker
+      systemd: systemd
+      process: A process on the host
+      unknown: Unknown
+
+    # The Page Builder block: its name in the block picker and its settings form.
+    block:
+      name: Game servers
+      servers_label: Which servers
+      servers_public: Every public server
+      servers_running: Only servers that are up
+      show_players: Show who is online
+      show_join: Show join details
+      show_join_help: Only ever shown to people whose group is allowed to see them.
+      compact: Compact rows
+
     # The per-server page.
     back_to_all: All servers
     server_not_here: That server is not here. It may have been removed, or its host may not be paired any more.

@@ -5,6 +5,7 @@ namespace ErnestDefoe\Garrison\Widget;
 use ErnestDefoe\Garrison\Model\Server;
 use Ernestdefoe\PageBuilder\Block\BlockInterface;
 use Flarum\User\User;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
  * Garrison's server-status widget, as a Page Builder block.
@@ -23,6 +24,22 @@ use Flarum\User\User;
  */
 class ServerStatusBlock implements BlockInterface
 {
+    /**
+     * 🚨 Translated HERE, as text. Page Builder's contract is plain strings — it
+     * prints name() and every schema label exactly as given — so a block that
+     * returns English literals is English on every forum, whatever its locale.
+     * Built by the container, so the translator is injected; the strings are
+     * read lazily, per call, so they follow the request's locale.
+     */
+    public function __construct(private readonly TranslatorInterface $translator)
+    {
+    }
+
+    private function t(string $key): string
+    {
+        return $this->translator->trans('ernestdefoe-garrison.forum.block.' . $key);
+    }
+
     public function type(): string
     {
         return 'garrison-server-status';
@@ -30,7 +47,7 @@ class ServerStatusBlock implements BlockInterface
 
     public function name(): string
     {
-        return 'Game servers';
+        return $this->t('name');
     }
 
     public function icon(): string
@@ -59,33 +76,33 @@ class ServerStatusBlock implements BlockInterface
             [
                 'key' => 'servers',
                 'type' => 'select',
-                'label' => 'Which servers',
+                'label' => $this->t('servers_label'),
                 'default' => 'public',
                 'options' => [
-                    ['value' => 'public', 'label' => 'Every public server'],
-                    ['value' => 'running', 'label' => 'Only servers that are up'],
+                    ['value' => 'public', 'label' => $this->t('servers_public')],
+                    ['value' => 'running', 'label' => $this->t('servers_running')],
                 ],
             ],
             [
                 'key' => 'showPlayers',
                 'type' => 'toggle',
-                'label' => 'Show who is online',
+                'label' => $this->t('show_players'),
                 'default' => true,
             ],
             [
                 'key' => 'showJoin',
                 'type' => 'toggle',
-                'label' => 'Show join details',
+                'label' => $this->t('show_join'),
                 'default' => true,
                 // Says what the toggle actually does, because "show join
                 // details" reads like it overrides the permission and it does
                 // not — nor should a layout choice be able to.
-                'help' => 'Only ever shown to people whose group is allowed to see them.',
+                'help' => $this->t('show_join_help'),
             ],
             [
                 'key' => 'compact',
                 'type' => 'toggle',
-                'label' => 'Compact rows',
+                'label' => $this->t('compact'),
                 'default' => false,
             ],
         ];
