@@ -3,7 +3,9 @@
 namespace ErnestDefoe\Garrison\Model;
 
 use Carbon\Carbon;
+use ErnestDefoe\Garrison\Health\HealthText;
 use Flarum\Database\AbstractModel;
+use Flarum\Locale\TranslatorInterface;
 use Flarum\User\User;
 
 /**
@@ -138,6 +140,7 @@ class Server extends AbstractModel
             return [];
         }
 
+        $text = self::healthText();
         $failing = [];
 
         foreach ($decoded as $check) {
@@ -146,13 +149,36 @@ class Server extends AbstractModel
             }
 
             $failing[] = [
+                // The probe's name is the operator's own words from their
+                // agent config, so it is shown as written.
                 'name' => (string) ($check['name'] ?? 'check'),
-                'detail' => (string) ($check['detail'] ?? ''),
+                'detail' => $text->detail($check),
                 'warn' => ! empty($check['warn']),
             ];
         }
 
         return $failing;
+    }
+
+    /**
+     * The one-line health summary, in the forum's language where the agent
+     * sent an ID this forum knows, else the agent's own English.
+     */
+    public function healthSummaryText(): ?string
+    {
+        $params = null;
+
+        if (! empty($this->health_summary_params)) {
+            $decoded = json_decode($this->health_summary_params, true);
+            $params = is_array($decoded) ? $decoded : null;
+        }
+
+        return self::healthText()->summary($this->health_summary_id, $params, $this->health_summary);
+    }
+
+    private static function healthText(): HealthText
+    {
+        return new HealthText(resolve(TranslatorInterface::class));
     }
 
     /**

@@ -2,6 +2,7 @@ package health
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 	"testing"
 )
@@ -178,4 +179,125 @@ func TestWarnProbesDoNotMakeAServerUnready(t *testing.T) {
 
 func staticLog(lines []string) LogSource {
 	return func(context.Context, int) ([]string, error) { return lines, nil }
+}
+
+// 🚨 Every finding goes out twice: as an ID with params the forum translates,
+// and as the English an older forum shows. Losing either half is silent — the
+// forum just falls back — so the pairing is checked for every path that
+// produces a message.
+func TestEveryFindingCarriesAnIDParamsAndTheEnglish(t *testing.T) {
+	ctx := context.Background()
+
+	cases := []struct {
+		name    string
+		probe   Probe
+		logs    []string
+		id      string
+		params  Params
+		english string
+	}{
+		{"crash signature found", Probe{Name: "crash", Type: "log_match", Pattern: "boom"}, []string{"boom"},
+			DetailLogFound, Params{"pattern": "boom"}, `found "boom" in recent output`},
+		{"sign of life missing", Probe{Name: "alive", Type: "log_quiet", Pattern: "joined"}, []string{"nothing"},
+			DetailLogAbsent, Params{"pattern": "joined"}, `nothing matching "joined" in recent output`},
+		{"sign of life missing in a window", Probe{Name: "alive", Type: "log_quiet", Pattern: "joined", Within: "10m"}, []string{"nothing"},
+			DetailLogAbsentWithin, Params{"pattern": "joined", "within": "10m0s"}, `nothing matching "joined" in the last 10m0s`},
+		{"unknown type", Probe{Name: "typo", Type: "udp_recvqq", Port: 1}, nil,
+			DetailUnknownType, Params{"type": "udp_recvqq"}, `unknown probe type "udp_recvqq"`},
+		{"tcp with no port", Probe{Name: "tcp", Type: "tcp"}, nil,
+			DetailNoPort, nil, "no port configured"},
+	}
+
+	for _, c := range cases {
+		r := run(ctx, c.probe, staticLog(c.logs))
+
+		if r.ID != c.id {
+			t.Errorf("%s: id = %q, want %q", c.name, r.ID, c.id)
+		}
+		if r.Detail != c.english {
+			t.Errorf("%s: detail = %q, want the unchanged English %q", c.name, r.Detail, c.english)
+		}
+		if len(r.Params) != len(c.params) {
+			t.Errorf("%s: params = %v, want %v", c.name, r.Params, c.params)
+		}
+		for k, v := range c.params {
+			if r.Params[k] != v {
+				t.Errorf("%s: params[%q] = %v, want %v", c.name, k, r.Params[k], v)
+			}
+		}
+	}
+}
+
+func TestTCPFindingsCarryThePort(t *testing.T) {
+	// Port 1 on loopback: nothing listens there on any sane host.
+	ok, m := tcpConnect(context.Background(), 1)
+	if ok {
+		t.Skip("something is listening on TCP 1")
+	}
+	if m.id != DetailTCPRefused || m.params["port"] != 1 || m.english != "nothing accepting on TCP 1" {
+		t.Fatalf("got %+v", m)
+	}
+}
+
+func TestEverySummaryCarriesAnID(t *testing.T) {
+	ctx := context.Background()
+	failing := []Probe{{Name: "matchmaking threw", Type: "log_match", Pattern: "boom"}}
+	skipped := []Probe{{Name: "crash", Type: "log_match", Pattern: "boom"}}
+
+	cases := []struct {
+		name    string
+		report  Report
+		id      string
+		summary string
+	}{
+		{"stopped", Check(ctx, false, nil, nil), SummaryNotRunning, "not running"},
+		{"no probes", Check(ctx, true, nil, nil), SummaryNoProbes, "no readiness probes configured for this game"},
+		{"all skipped", Check(ctx, true, skipped, nil), SummaryNoneEvaluated, "no probe could be evaluated"},
+		{"a probe failed", Check(ctx, true, failing, staticLog([]string{"boom"})), SummaryProbeFailed, "matchmaking threw"},
+	}
+
+	for _, c := range cases {
+		if c.report.SummaryID != c.id || c.report.Summary != c.summary {
+			t.Errorf("%s: summary = %q / %q, want %q / %q", c.name, c.report.SummaryID, c.report.Summary, c.id, c.summary)
+		}
+	}
+
+	// The failing probe's name is the operator's own words, passed through.
+	r := cases[3].report
+	if r.SummaryParams["probe"] != "matchmaking threw" {
+		t.Fatalf("summaryParams = %v, want the probe's name", r.SummaryParams)
+	}
+}
+
+// The JSON keys are what the PHP side reads. A renamed tag breaks translation
+// on every forum without failing anything, so the wire shape is pinned here.
+func TestTheWireShapeOfIDsAndParams(t *testing.T) {
+	report := Check(context.Background(), true,
+		[]Probe{{Name: "crash", Type: "log_match", Pattern: "boom"}},
+		staticLog([]string{"boom"}))
+
+	raw, err := json.Marshal(report)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var got map[string]any
+	if err := json.Unmarshal(raw, &got); err != nil {
+		t.Fatal(err)
+	}
+
+	if got["summary"] != "crash" || got["summaryId"] != "probe_failed" {
+		t.Fatalf("summary keys wrong: %s", raw)
+	}
+	if p, _ := got["summaryParams"].(map[string]any); p["probe"] != "crash" {
+		t.Fatalf("summaryParams wrong: %s", raw)
+	}
+
+	res := got["results"].([]any)[0].(map[string]any)
+	if res["id"] != "log_found" || res["detail"] != `found "boom" in recent output` {
+		t.Fatalf("result keys wrong: %s", raw)
+	}
+	if p, _ := res["params"].(map[string]any); p["pattern"] != "boom" {
+		t.Fatalf("result params wrong: %s", raw)
+	}
 }

@@ -72,6 +72,27 @@ ernestdefoe-garrison:
     abandoned: "🚨 **{name}** did not come back after repeated restarts. Automatic restarts have stopped and it needs a person. {url}"
     unknown: "**{name}**: {state}. {url}"
 
+  # 🚨 What a health check found, from the agent's stable IDs (protocol 2).
+  # Rendered on the server page, in alerts and in incidents. An ID missing here
+  # falls back to the agent's own English, never to the key, so a newer agent
+  # than this file is safe. Params are the agent's facts and arrive as text.
+  health:
+    summary:
+      not_running: Not running
+      no_probes: No readiness probes are configured for this game
+      none_evaluated: No probe could be evaluated
+    detail:
+      udp_queue_stuck: "UDP {port} has {bytes} bytes queued and unread — the socket is open but nothing is reading it"
+      udp_queue: "UDP {port}: {bytes} bytes queued"
+      tcp_refused: "Nothing is accepting connections on TCP {port}"
+      tcp_accepting: "TCP {port} is accepting connections"
+      no_port: No port is configured for this probe
+      log_absent: "Nothing matching “{pattern}” in recent output"
+      log_absent_within: "Nothing matching “{pattern}” in the last {within}"
+      log_found: "Found “{pattern}” in recent output"
+      unknown_type: "Unknown probe type “{type}”"
+    seconds: "{count, plural, one {# second} other {# seconds}}"
+
   forum:
     # The notification component reads these. The state is mapped to a key
     # through a closed switch rather than interpolated, so an unexpected state

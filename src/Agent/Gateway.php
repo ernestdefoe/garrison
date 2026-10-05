@@ -235,6 +235,21 @@ class Gateway
             $health = $report['health'];
             $server->health_state = (string) ($health['state'] ?? 'unknown');
             $server->health_summary = $health['summary'] ?? null;
+
+            /*
+             * Protocol 2: the summary as an ID and params, so it can be
+             * translated. Absent from an older agent, and then both are
+             * cleared — a stale ID from before a downgrade must not outlive
+             * the English it described.
+             */
+            $summaryId = $health['summaryId'] ?? null;
+            $summaryParams = $health['summaryParams'] ?? null;
+            $server->health_summary_id = is_string($summaryId) && preg_match('/^[a-z0-9_]{1,64}$/', $summaryId)
+                ? $summaryId
+                : null;
+            $server->health_summary_params = $server->health_summary_id !== null && is_array($summaryParams) && $summaryParams !== []
+                ? json_encode($summaryParams)
+                : null;
             $server->health_checks = isset($health['results'])
                 ? json_encode($health['results'])
                 : null;

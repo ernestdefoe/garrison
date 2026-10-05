@@ -105,7 +105,7 @@ class ListServersController implements RequestHandlerInterface
                  * while every dashboard showed green.
                  */
                 'health' => $server->health_state,
-                'healthSummary' => $server->health_summary,
+                'healthSummary' => $server->healthSummaryText(),
                 'needsAttention' => (bool) $server->needs_attention,
                 'autoRemediate' => (bool) $server->auto_remediate,
 

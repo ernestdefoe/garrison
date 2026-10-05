@@ -20,6 +20,18 @@ import (
 	"time"
 )
 
+// ProtocolVersion is the revision of what the agent SENDS, raised whenever a
+// report gains something a forum can use.
+//
+//   - 1 (absent): health summaries and check details in English only.
+//   - 2: health also carries stable IDs and params (summaryId, summaryParams;
+//     each result's id and params), alongside the English, which is kept.
+//
+// 🚨 Additive only. A forum must keep working with an agent on any revision,
+// and an agent with any forum — so nothing is ever removed from the wire, and
+// a forum reads a field's presence, never this number, to decide what to show.
+const ProtocolVersion = 2
+
 // Verb is one operation the agent will perform. The set is closed: see Known.
 type Verb string
 
@@ -460,7 +472,12 @@ type Line struct {
 // AgentInfo is what agent.info returns: enough for the forum to decide what to
 // offer without guessing.
 type AgentInfo struct {
-	Version string   `json:"version"`
+	Version string `json:"version"`
+
+	// Protocol is the wire revision, so the forum can tell what this agent
+	// sends without parsing Version. See ProtocolVersion.
+	Protocol int `json:"protocol"`
+
 	OS      string   `json:"os"`
 	Arch    string   `json:"arch"`
 	Drivers []string `json:"drivers"`

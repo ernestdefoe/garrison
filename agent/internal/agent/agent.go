@@ -22,7 +22,7 @@ import (
 
 // Version is the agent build. The forum shows it, and an agent several
 // versions behind is itself an incident worth surfacing.
-const Version = "0.1.0-spike"
+const Version = "0.2.0-spike"
 
 // Agent owns the servers, the drivers and the in-flight streams.
 type Agent struct {
@@ -283,12 +283,13 @@ func (a *Agent) dispatch(ctx context.Context, req protocol.Request, srv driver.S
 			verbs = append(verbs, string(v))
 		}
 		return protocol.AgentInfo{
-			Version: Version,
-			OS:      runtime.GOOS,
-			Arch:    runtime.GOARCH,
-			Drivers: a.drivers.Names(),
-			Verbs:   verbs,
-			Servers: len(a.serverList()),
+			Version:  Version,
+			Protocol: protocol.ProtocolVersion,
+			OS:       runtime.GOOS,
+			Arch:     runtime.GOARCH,
+			Drivers:  a.drivers.Names(),
+			Verbs:    verbs,
+			Servers:  len(a.serverList()),
 		}, nil
 
 	case protocol.VerbServerList:

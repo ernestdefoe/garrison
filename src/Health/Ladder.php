@@ -196,7 +196,7 @@ class Ladder
 
             // The one alert that must not be missed: automatic recovery has
             // stopped, and nothing else will happen until somebody acts.
-            $this->alerts->serverIncident($server, 'abandoned', $server->health_summary);
+            $this->alerts->serverIncident($server, 'abandoned', $server->healthSummaryText());
 
             return 'abandoned incident ' . $incident->id;
         }
@@ -204,7 +204,7 @@ class Ladder
         $this->dispatcher->queue($actor, $server, 'server.restart', [], 'health');
 
         $incident->restarts = (int) $incident->restarts + 1;
-        $incident->appendAction(sprintf('restart #%d queued (%s)', $incident->restarts, $server->health_summary ?: 'unready'));
+        $incident->appendAction(sprintf('restart #%d queued (%s)', $incident->restarts, $server->healthSummaryText() ?: 'unready'));
         $incident->save();
 
         $server->last_remediation_at = Carbon::now();
@@ -232,13 +232,13 @@ class Ladder
         $this->alerts->serverIncident(
             $server,
             $server->health_state === 'down' ? 'down' : 'unready',
-            $server->health_summary
+            $server->healthSummaryText()
         );
 
         $incident = new Incident();
         $incident->server_id = $server->id;
         $incident->started_at = $server->unready_since ?? Carbon::now();
-        $incident->cause = $server->health_summary ?: ('health is ' . $server->health_state);
+        $incident->cause = $server->healthSummaryText() ?: ('health is ' . $server->health_state);
         $incident->detail = $server->health_checks;
         $incident->status = 'open';
         $incident->restarts = 0;
