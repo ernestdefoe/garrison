@@ -95,6 +95,12 @@ class Dispatcher
         'backup.delete',
     ];
 
+    /**
+     * The most scrollback one `console.tail` may ask for. The same ceiling the
+     * console page reads with, so the generic endpoint is never a way round it.
+     */
+    public const TAIL_HISTORY_MAX = 500;
+
     public function __construct(
         protected TranslatorInterface $translator,
         protected Entitled $entitled
@@ -147,6 +153,8 @@ class Dispatcher
         }
 
         $this->assertPermitted($actor, $server, $verb);
+
+        $params = $this->constrain($verb, $params);
 
         $command = new Command();
         $command->agent_id = $server->agent_id;
@@ -243,6 +251,20 @@ class Dispatcher
             ]);
         }
 
+        /*
+         * 🚨 Reading the console is console access, not viewing.
+         *
+         * The console page asks for `garrison.console`, because a game console
+         * carries chat, IPs and admin commands. console.tail returns the same
+         * lines through the generic queue, so it needs the same permission or
+         * `garrison.view` alone reads everything ConsoleController refuses.
+         */
+        if ($verb === 'console.tail' && ! $actor->hasPermission('garrison.console')) {
+            throw new ValidationException([
+                'verb' => $this->translator->trans('ernestdefoe-garrison.api.errors.not_permitted'),
+            ]);
+        }
+
         // console.send deserves its own gate rather than riding along with
         // restart. Sending a line to a game console is arbitrary in-game
         // authority — ban, op, give items — and an operator may reasonably
@@ -272,6 +294,23 @@ class Dispatcher
                 'verb' => $this->translator->trans('ernestdefoe-garrison.api.errors.not_permitted'),
             ]);
         }
+    }
+
+    /**
+     * Bound what a permitted verb may ask for.
+     *
+     * console.tail's history is capped at the same ceiling the console page
+     * reads with, and only `history` is passed on.
+     */
+    protected function constrain(string $verb, array $params): array
+    {
+        if ($verb !== 'console.tail') {
+            return $params;
+        }
+
+        $history = (int) ($params['history'] ?? 200);
+
+        return ['history' => max(1, min(self::TAIL_HISTORY_MAX, $history))];
     }
 
     /**
