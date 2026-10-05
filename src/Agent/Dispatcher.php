@@ -299,13 +299,23 @@ class Dispatcher
     /**
      * Bound what a permitted verb may ask for.
      *
-     * console.tail's history is capped at the same ceiling the console page
-     * reads with, and only `history` is passed on.
+     * 🚨 console.tail is answered once and never FOLLOWS from here. A follow
+     * opens a `journalctl -f` / `docker logs -f` on the game host that nothing
+     * on the forum ever closes, so every click would leave another process
+     * running for ever. The console page does not need it — the agent already
+     * ships console lines with every poll — and history is capped at the same
+     * ceiling the console page reads with.
      */
     protected function constrain(string $verb, array $params): array
     {
         if ($verb !== 'console.tail') {
             return $params;
+        }
+
+        if (! empty($params['follow'])) {
+            throw new ValidationException([
+                'verb' => $this->translator->trans('ernestdefoe-garrison.api.errors.no_follow'),
+            ]);
         }
 
         $history = (int) ($params['history'] ?? 200);

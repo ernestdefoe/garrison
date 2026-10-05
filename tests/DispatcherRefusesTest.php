@@ -109,6 +109,15 @@ class DispatcherRefusesTest extends TestCase
         $this->addToAssertionCount(2);
     }
 
+    public function testTheQueueNeverOpensAFollowingTail(): void
+    {
+        // Not even for an administrator: nothing on the forum closes one.
+        $this->assertRefused(
+            fn () => $this->dispatcher()->queue($this->actor(['garrison.manage']), $this->server(), 'console.tail', ['follow' => true]),
+            'ernestdefoe-garrison.api.errors.no_follow'
+        );
+    }
+
     public function testTailHistoryIsCappedAndNothingElseRidesAlong(): void
     {
         $d = $this->dispatcher();

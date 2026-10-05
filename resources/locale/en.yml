@@ -16,6 +16,7 @@ ernestdefoe-garrison:
       bad_scheme: Only http and https addresses can be fetched.
       unresolvable: That address does not resolve to anything.
       private_address: That address points inside this network, so Garrison will not fetch it.
+      no_follow: The forum reads the console as it is shipped, so it cannot open a following stream. Open the server's console instead.
 
       # 🚨 Every one of these is a refusal somebody can ACT on, and each points
       # at a different next step. A single "something went wrong" would make

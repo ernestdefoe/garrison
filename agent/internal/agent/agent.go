@@ -30,7 +30,7 @@ type Agent struct {
 	drivers driver.Set
 
 	mu      sync.Mutex
-	streams map[string]context.CancelFunc // by request ID
+	streams map[string]*stream // by request ID
 
 	// The last off-site copy per server, so status can report it without
 	// asking the bucket on every poll. See OffsiteStatus for why.
@@ -151,7 +151,7 @@ func New(ctx context.Context, servers []driver.Server, candidates driver.Set) (*
 	a := &Agent{
 		servers:     make(map[string]driver.Server, len(servers)),
 		drivers:     make(driver.Set),
-		streams:     make(map[string]context.CancelFunc),
+		streams:     make(map[string]*stream),
 		offsiteLast: make(map[string]offsiteOutcome),
 		watchers:    make(map[string]*players.Watcher),
 		installing:  make(map[string]struct{}),
@@ -558,6 +558,9 @@ func (a *Agent) dispatch(ctx context.Context, req protocol.Request, srv driver.S
 		if p.History <= 0 {
 			p.History = 200
 		}
+		if p.History > MaxTailHistory {
+			p.History = MaxTailHistory
+		}
 		return a.tail(ctx, req, srv, drv, p, emit)
 	}
 
@@ -580,14 +583,26 @@ func (a *Agent) tail(ctx context.Context, req protocol.Request, srv driver.Serve
 	}
 
 	// Following: answer immediately so the caller is not left waiting, then
-	// stream events under this request's ID until it is cancelled.
-	streamCtx, cancel := context.WithCancel(context.WithoutCancel(ctx))
-
+	// stream events under this request's ID until it is cancelled — or until
+	// it has run for StreamLifetime, whichever comes first.
+	//
+	// 🚨 BOUNDED, in number and in time. Nothing on the forum ever cancels a
+	// stream, so an unbounded follow is a `journalctl -f` / `docker logs -f`
+	// that outlives everybody who asked for it, and a caller who repeats the
+	// request piles them up on the game host until it runs out of processes.
 	a.mu.Lock()
-	if old, ok := a.streams[req.ID]; ok {
-		old() // the same ID twice replaces the stream rather than duplicating it
+	old, replacing := a.streams[req.ID]
+	if !replacing && len(a.streams) >= MaxStreams {
+		a.mu.Unlock()
+		return nil, protocol.Errf(protocol.CodeBadRequest,
+			"%d console streams are already open on this host; close one first", MaxStreams)
 	}
-	a.streams[req.ID] = cancel
+	if replacing {
+		old.cancel() // the same ID twice replaces the stream rather than duplicating it
+	}
+	streamCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), StreamLifetime)
+	mine := &stream{cancel: cancel}
+	a.streams[req.ID] = mine
 	a.mu.Unlock()
 
 	a.background.Add(1)
@@ -597,7 +612,12 @@ func (a *Agent) tail(ctx context.Context, req protocol.Request, srv driver.Serve
 
 		defer func() {
 			a.mu.Lock()
-			delete(a.streams, req.ID)
+			// Only our own entry: a replacement registered under the same ID
+			// must not be forgotten when the stream it replaced winds down,
+			// or the cap would count one stream fewer than are running.
+			if a.streams[req.ID] == mine {
+				delete(a.streams, req.ID)
+			}
 			a.mu.Unlock()
 			cancel()
 		}()
@@ -614,15 +634,31 @@ func (a *Agent) tail(ctx context.Context, req protocol.Request, srv driver.Serve
 	return map[string]any{"streaming": true, "stream": req.ID}, nil
 }
 
+// stream is one following tail. A pointer, so the goroutine that runs it can
+// tell its own map entry from a replacement registered under the same ID.
+type stream struct {
+	cancel context.CancelFunc
+}
+
+// MaxStreams is how many following tails one agent keeps open at once.
+const MaxStreams = 4
+
+// MaxTailHistory caps the scrollback one console.tail may ask for.
+const MaxTailHistory = 2000
+
+// StreamLifetime ends a following tail nobody cancelled. A var so a test can
+// shorten it.
+var StreamLifetime = 30 * time.Minute
+
 // CancelStream ends a following tail. The forum calls this when a console tab
 // closes; without it an agent accumulates one `docker logs --follow` per tab
 // anybody ever opened.
 func (a *Agent) CancelStream(id string) bool {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	cancel, ok := a.streams[id]
+	s, ok := a.streams[id]
 	if ok {
-		cancel()
+		s.cancel()
 		delete(a.streams, id)
 	}
 	return ok
@@ -632,8 +668,8 @@ func (a *Agent) CancelStream(id string) bool {
 func (a *Agent) CancelAll() {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	for id, cancel := range a.streams {
-		cancel()
+	for id, s := range a.streams {
+		s.cancel()
 		delete(a.streams, id)
 	}
 }
