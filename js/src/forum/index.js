@@ -7,12 +7,15 @@ import IndexPage from 'flarum/forum/components/IndexPage';
 import { GarrisonServer } from './models';
 import ServerIncidentNotification from './components/ServerIncidentNotification';
 import ServerList from './components/ServerList';
-import ServerPage from './components/ServerPage';
-import ServersPage from './components/ServersPage';
 import registerWidgetHosts from './hosts';
 import exposeApi from './api';
 import drainPanelQueue from './panels';
 import { hostedElsewhere } from './placement';
+
+// The two pages load on demand, together (see garrison-pages.js).
+const page = (name) => () => import('./garrison-pages').then((pages) => ({ default: pages[name] }));
+const ServersPage = page('ServersPage');
+const ServerPage = page('ServerPage');
 
 /**
  * 🚨 Every host is optional. Garrison must render with none of the four widget
