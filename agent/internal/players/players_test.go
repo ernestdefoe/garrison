@@ -468,3 +468,31 @@ func TestUnrealWithoutLogTimestamps(t *testing.T) {
 		t.Fatalf("online is %q, want alice", got)
 	}
 }
+
+// 🚨 A Say template that names nobody is a BROADCAST. Sending a verification
+// code through it puts the code in global chat, where anybody can read it and
+// confirm a name that is not theirs — so such a server must not verify at all,
+// whether the template came from a preset (Terraria's `say`) or an operator.
+func TestABroadcastIsNotAWhisper(t *testing.T) {
+	cases := map[string]Config{
+		"terraria preset": {Preset: "terraria"},
+		"operator say":    {Preset: "minecraft", Say: "say {message}"},
+	}
+
+	for name, cfg := range cases {
+		t.Run(name, func(t *testing.T) {
+			w := watcher(t, cfg)
+
+			feed(w, "alice has joined.", "[12:00:00] [Server thread/INFO]: alice joined the game")
+
+			if w.CanSay() {
+				t.Fatal("CanSay is true for a template with no {player}")
+			}
+
+			line, err := w.VerifyLine("alice", "AB12CD")
+			if err == nil {
+				t.Fatalf("verification would broadcast %q to the whole server", line)
+			}
+		})
+	}
+}

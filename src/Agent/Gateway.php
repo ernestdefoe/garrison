@@ -335,6 +335,12 @@ class Gateway
         $server->players_known = $known;
         $server->players_online_names = $known ? json_encode($online) : null;
 
+        // Whether linking can be offered here. Absent from an agent too old
+        // to report it, which is stored as null rather than guessed.
+        $server->players_can_verify = $known && array_key_exists('canVerify', $report)
+            ? (bool) $report['canVerify']
+            : null;
+
         $server->last_status_at = Carbon::now();
         $server->updated_at = Carbon::now();
         $server->save();

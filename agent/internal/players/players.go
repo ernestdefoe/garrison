@@ -114,11 +114,18 @@ var presets = map[string]Config{
 		Leave: `(?P<name>.+) disconnecting:`,
 	},
 
-	// Terraria.
+	/*
+	   Terraria.
+
+	   🚨 No Say. The vanilla server has no whisper — `say` broadcasts to
+	   EVERYONE — and a verification code read out in global chat proves
+	   nothing: anybody can claim "Admin", read Admin's code off the chat, and
+	   type it back. A server running a plugin with a real private message can
+	   configure one.
+	*/
 	"terraria": {
 		Join:  `(?P<name>.+) has joined\.$`,
 		Leave: `(?P<name>.+) has left\.$`,
-		Say:   `say {message}`,
 	},
 
 	/*
@@ -230,6 +237,18 @@ func New(cfg Config) (*Watcher, error) {
 	leave, err := compile("leave", resolved.Leave)
 	if err != nil {
 		return nil, err
+	}
+
+	/*
+	   🚨 A Say with no {player} is a BROADCAST, not a whisper, and is dropped.
+
+	   The whole proof is that only the claimed player can read the code. A
+	   template that does not address anybody sends it to the whole server, so
+	   whoever is watching chat can confirm a name that is not theirs. An
+	   operator's own template is held to the same rule as the presets.
+	*/
+	if !strings.Contains(resolved.Say, "{player}") {
+		resolved.Say = ""
 	}
 
 	verify := resolved.VerifyMessage
@@ -358,7 +377,7 @@ The code is checked too, though the forum generates it: a bug there must not be
 able to turn into a console injection either.
 */
 func (w *Watcher) VerifyLine(player, code string) (string, error) {
-	if w.say == "" {
+	if w.say == "" || !strings.Contains(w.say, "{player}") {
 		return "", fmt.Errorf("this server has no way to send a message to a player, so it cannot verify anybody")
 	}
 
@@ -412,7 +431,7 @@ func safeForConsole(value string) bool {
 
 // CanSay reports whether in-game verification is possible on this server.
 func (w *Watcher) CanSay() bool {
-	return w != nil && w.say != ""
+	return w != nil && w.say != "" && strings.Contains(w.say, "{player}")
 }
 
 func extract(re *regexp.Regexp, line string) string {

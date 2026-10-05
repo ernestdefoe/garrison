@@ -836,3 +836,27 @@ func TestTheOperatorsNameReachesTheForum(t *testing.T) {
 		t.Errorf("a server with no driver reported the name %q", names["orphan"])
 	}
 }
+
+// 🚨 The forum decides whether to offer account linking from this flag, so it
+// must reach the status report — true for a server that can whisper, false for
+// one whose only voice is a broadcast.
+func TestStatusSaysWhetherAServerCanWhisper(t *testing.T) {
+	for preset, want := range map[string]bool{"minecraft": true, "terraria": false} {
+		a, err := New(context.Background(),
+			[]driver.Server{{ID: "srv", Name: "Server", Driver: "fake", Players: players.Config{Preset: preset}}},
+			driver.Set{"fake": &fakeDriver{name: "fake", running: true}})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		got := a.StatusAll(context.Background())[0]
+		if got.CanVerify == nil || *got.CanVerify != want {
+			t.Fatalf("%s: canVerify is %v, want %v", preset, got.CanVerify, want)
+		}
+
+		b, _ := json.Marshal(got)
+		if !strings.Contains(string(b), fmt.Sprintf(`"canVerify":%v`, want)) {
+			t.Fatalf("%s: canVerify did not reach the wire: %s", preset, b)
+		}
+	}
+}

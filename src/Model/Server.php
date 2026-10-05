@@ -70,6 +70,7 @@ class Server extends AbstractModel
         'offsite_last_ok' => 'bool',
         'offsite_last_at' => 'datetime',
         'players_known' => 'bool',
+        'players_can_verify' => 'bool',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
@@ -201,6 +202,34 @@ class Server extends AbstractModel
         $decoded = json_decode((string) $this->players_online_names, true);
 
         return is_array($decoded) ? array_values(array_filter($decoded, 'is_string')) : [];
+    }
+
+    /**
+     * Games whose built-in way to speak to a player is a BROADCAST. Used only
+     * for an agent too old to report `canVerify` itself.
+     */
+    public const BROADCAST_ONLY_GAMES = ['terraria'];
+
+    /**
+     * Whether a verification code can be whispered to ONE player here.
+     *
+     * 🚨 A server that can only broadcast must not offer linking at all. The
+     * code would go to global chat, so anybody watching could claim a name
+     * that is not theirs, read its code off the chat, and confirm it. The
+     * agent's own answer wins; for an agent too old to give one, the game
+     * decides.
+     */
+    public function canVerifyPlayers(): bool
+    {
+        if (! $this->players_known) {
+            return false;
+        }
+
+        if ($this->players_can_verify !== null) {
+            return (bool) $this->players_can_verify;
+        }
+
+        return ! in_array(strtolower((string) $this->game), self::BROADCAST_ONLY_GAMES, true);
     }
 
     public function sessions()

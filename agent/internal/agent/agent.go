@@ -1080,6 +1080,8 @@ func (a *Agent) StatusAll(ctx context.Context) []protocol.Status {
 
 			st.Players = w.Online()
 			st.PlayersKnown = true
+			canVerify := w.CanSay()
+			st.CanVerify = &canVerify
 		}
 
 		out = append(out, st)

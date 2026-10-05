@@ -26,6 +26,7 @@ ernestdefoe-garrison:
       code_expired: That code has expired. Ask for a new one.
       code_wrong: That code is not right. Check it in the game and try again.
       code_too_soon: A code was just sent. Check the game, or wait a moment and try again.
+      cannot_whisper: This server can only announce to everybody, not message one player, so it cannot send you a private code. Ask an administrator to link your account.
 
   # 🚨 Email copy, and the one place in this file where a mistake cannot be
   # taken back — a forum post can be edited, a sent email cannot. The subject

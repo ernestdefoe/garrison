@@ -403,6 +403,11 @@ type Status struct {
 	// things on a panel.
 	PlayersKnown bool `json:"playersKnown,omitempty"`
 
+	// CanVerify says whether this server can whisper a verification code to
+	// ONE player. Nil when players are not read at all; false where the only
+	// way to speak is a broadcast, so the forum does not offer linking there.
+	CanVerify *bool `json:"canVerify,omitempty"`
+
 	// Offsite is what the agent knows about copies to remote storage. Nil when
 	// the operator has not configured any.
 	Offsite *OffsiteStatus `json:"offsite,omitempty"`

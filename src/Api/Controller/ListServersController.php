@@ -217,7 +217,8 @@ class ListServersController implements RequestHandlerInterface
              *
              * `canLink` is false where the server cannot whisper — a flow that
              * offers to send a code no game will deliver is a button that
-             * always fails.
+             * always fails, and one whose only voice is a broadcast would read
+             * the code out to everybody.
              */
             if (! $actor->isGuest()) {
                 $identity = $identities->get($server->id);
@@ -228,7 +229,7 @@ class ListServersController implements RequestHandlerInterface
                     'awaitingCode' => ! $identity->isVerified() && $identity->codeIsLive(),
                 ];
 
-                $row['canLink'] = $server->players_known;
+                $row['canLink'] = $server->canVerifyPlayers();
             }
 
             return $row;
