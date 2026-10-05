@@ -174,7 +174,9 @@ function registerBespoke(app, makeContent) {
     type: 'garrison-servers',
     label: 'ernestdefoe-garrison.forum.title',
     icon: 'fas fa-tower-observation',
-    zones: ['sidebar', 'above', 'below'],
+    // Bespoke's own zone names. 'above'/'below' are not zones it has, so the
+    // widget declared itself placeable in the sidebar only.
+    zones: ['sidebar', 'above-list', 'below-list', 'footer'],
     schema: [
       {
         key: 'heading',
