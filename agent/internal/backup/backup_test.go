@@ -289,3 +289,181 @@ func writeTar(t *testing.T, dest string, entries map[string]string) {
 	tw.Close()
 	gz.Close()
 }
+
+// writeEntries builds an archive from explicit headers, for the entry types a
+// crafted backup would use.
+func writeEntries(t *testing.T, dest string, entries []tar.Header, bodies map[string]string) {
+	t.Helper()
+
+	f, err := os.Create(dest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+
+	gz := gzip.NewWriter(f)
+	tw := tar.NewWriter(gz)
+
+	for _, h := range entries {
+		h := h
+		body := bodies[h.Name]
+		if h.Typeflag == tar.TypeReg {
+			h.Size = int64(len(body))
+			if h.Mode == 0 {
+				h.Mode = 0o640
+			}
+		}
+		if err := tw.WriteHeader(&h); err != nil {
+			t.Fatal(err)
+		}
+		if body != "" {
+			if _, err := tw.Write([]byte(body)); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	tw.Close()
+	gz.Close()
+}
+
+func victim(t *testing.T) (dir, file string) {
+	t.Helper()
+	dir = t.TempDir()
+	file = filepath.Join(dir, "authorized_keys")
+	if err := os.WriteFile(file, []byte("untouched"), 0o640); err != nil {
+		t.Fatal(err)
+	}
+	return dir, file
+}
+
+func assertUntouched(t *testing.T, dir, file string) {
+	t.Helper()
+	if got, _ := os.ReadFile(file); string(got) != "untouched" {
+		t.Fatalf("the file outside the tree was overwritten with %q", got)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "pwned")); err == nil {
+		t.Fatal("a file was created outside the tree")
+	}
+}
+
+const crafted = "evil-20260915-120000-aaaa.tar.gz"
+
+// 🚨 An archive that plants a link to outside the tree and then writes a file
+// THROUGH it. Every name passes the zip-slip check; the filesystem is what
+// sends the write elsewhere.
+func TestARestoreDoesNotWriteThroughALinkItCreated(t *testing.T) {
+	cfg := fixture(t)
+	os.MkdirAll(cfg.Dir, 0o750)
+	outDir, outFile := victim(t)
+
+	writeEntries(t, filepath.Join(cfg.Dir, crafted), []tar.Header{
+		{Name: "worlds/ssh", Typeflag: tar.TypeSymlink, Linkname: outDir},
+		{Name: "worlds/ssh/authorized_keys", Typeflag: tar.TypeReg},
+		{Name: "worlds/ssh/pwned", Typeflag: tar.TypeReg},
+	}, map[string]string{"worlds/ssh/authorized_keys": "OWNED", "worlds/ssh/pwned": "OWNED"})
+
+	Restore(context.Background(), cfg, crafted, false)
+
+	assertUntouched(t, outDir, outFile)
+}
+
+// 🚨 The game itself can plant the link — the directory is writable by
+// whatever runs in it — and the agent restores as root.
+func TestARestoreDoesNotWriteThroughALinkAlreadyInTheTree(t *testing.T) {
+	cfg := fixture(t)
+	os.MkdirAll(cfg.Dir, 0o750)
+	outDir, outFile := victim(t)
+
+	writeEntries(t, filepath.Join(cfg.Dir, crafted), []tar.Header{
+		{Name: "plugins/authorized_keys", Typeflag: tar.TypeReg},
+		{Name: "plugins/pwned", Typeflag: tar.TypeReg},
+	}, map[string]string{"plugins/authorized_keys": "OWNED", "plugins/pwned": "OWNED"})
+
+	// Planted after the archive was made: a directory that is now a link out.
+	if err := os.Symlink(outDir, filepath.Join(cfg.Root, "plugins")); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := Restore(context.Background(), cfg, crafted, false); err == nil {
+		t.Fatal("a restore through a planted directory link reported success")
+	}
+
+	assertUntouched(t, outDir, outFile)
+}
+
+// A link planted where a FILE is about to be restored is replaced, not
+// truncated through.
+func TestARestoreReplacesALinkInAFilesPlace(t *testing.T) {
+	cfg := fixture(t)
+	_, outFile := victim(t)
+
+	b, err := Create(context.Background(), cfg, "srv", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cfgPath := filepath.Join(cfg.Root, "server.cfg")
+	os.Remove(cfgPath)
+	if err := os.Symlink(outFile, cfgPath); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := Restore(context.Background(), cfg, b.ID, false); err != nil {
+		t.Fatal(err)
+	}
+
+	if got, _ := os.ReadFile(outFile); string(got) != "untouched" {
+		t.Fatalf("the restore wrote through the link: outside file is %q", got)
+	}
+
+	info, err := os.Lstat(cfgPath)
+	if err != nil || info.Mode()&os.ModeSymlink != 0 {
+		t.Fatalf("server.cfg is still a link after the restore")
+	}
+	if got, _ := os.ReadFile(cfgPath); string(got) != "setting=1" {
+		t.Fatalf("server.cfg is %q, want the restored contents", got)
+	}
+}
+
+func TestARestoreRefusesHardLinks(t *testing.T) {
+	cfg := fixture(t)
+	os.MkdirAll(cfg.Dir, 0o750)
+
+	writeEntries(t, filepath.Join(cfg.Dir, crafted), []tar.Header{
+		{Name: "worlds/world.db", Typeflag: tar.TypeLink, Linkname: "/etc/passwd"},
+	}, nil)
+
+	if _, err := Restore(context.Background(), cfg, crafted, false); err == nil {
+		t.Fatal("an archive with a hard link was restored")
+	}
+
+	if got, _ := os.ReadFile(filepath.Join(cfg.Root, "worlds", "world.db")); string(got) != "a world" {
+		t.Fatalf("a refused archive still changed the tree: world.db is %q", got)
+	}
+}
+
+// The legitimate half: a link inside the tree survives a round trip.
+func TestALinkInsideTheTreeRoundTrips(t *testing.T) {
+	cfg := fixture(t)
+
+	if err := os.Symlink("world.db", filepath.Join(cfg.Root, "worlds", "latest")); err != nil {
+		t.Fatal(err)
+	}
+
+	b, err := Create(context.Background(), cfg, "srv", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	os.Remove(filepath.Join(cfg.Root, "worlds", "latest"))
+
+	if _, err := Restore(context.Background(), cfg, b.ID, false); err != nil {
+		t.Fatal(err)
+	}
+
+	target, err := os.Readlink(filepath.Join(cfg.Root, "worlds", "latest"))
+	if err != nil || target != "world.db" {
+		t.Fatalf("the in-tree link came back as %q (%v)", target, err)
+	}
+}
