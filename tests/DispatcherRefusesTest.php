@@ -129,14 +129,48 @@ class DispatcherRefusesTest extends TestCase
         // Other verbs' params are untouched.
         $this->assertSame(['line' => 'say hi'], $d->bounded('console.send', ['line' => 'say hi']));
     }
+
+    public function testAMemberCannotQueuePlayerVerifyThemselves(): void
+    {
+        $this->assertRefused(
+            fn () => $this->dispatcher()->queue($this->actor([]), $this->server(), 'player.verify', ['player' => 'alice', 'code' => 'visit evil.example']),
+            'ernestdefoe-garrison.api.errors.not_permitted'
+        );
+
+        // Nor an administrator: the Linker is the only author of a code.
+        $this->assertRefused(
+            fn () => $this->dispatcher()->queue($this->actor(['garrison.manage']), $this->server(), 'player.verify', ['player' => 'alice', 'code' => 'x']),
+            'ernestdefoe-garrison.api.errors.not_permitted'
+        );
+    }
+
+    public function testTheLinkerMayStillQueuePlayerVerify(): void
+    {
+        $this->dispatcher()->permitted($this->actor([]), $this->server(), 'player.verify', Dispatcher::SOURCE_IDENTITY);
+
+        $this->addToAssertionCount(1);
+    }
+
+    /**
+     * 🚨 The wiring half. The refusal above keys on the source, so it only
+     * protects anything if the generic endpoint cannot claim to be the Linker.
+     */
+    public function testTheGenericEndpointDoesNotChooseItsSource(): void
+    {
+        $source = (string) file_get_contents(__DIR__ . '/../src/Api/Controller/QueueCommandController.php');
+
+        $this->assertStringNotContainsString('SOURCE_IDENTITY', $source);
+        $this->assertStringNotContainsString("'identity'", $source);
+        $this->assertDoesNotMatchRegularExpression('/\$body\[.source.\]/', $source, 'the browser must not pick the source');
+    }
 }
 
 /** Exposes the two decisions so the permitted paths can be asserted without a database. */
 class ExposedDispatcher extends Dispatcher
 {
-    public function permitted(User $actor, Server $server, string $verb): void
+    public function permitted(User $actor, Server $server, string $verb, string $source = 'user'): void
     {
-        $this->assertPermitted($actor, $server, $verb);
+        $this->assertPermitted($actor, $server, $verb, $source);
     }
 
     public function bounded(string $verb, array $params): array

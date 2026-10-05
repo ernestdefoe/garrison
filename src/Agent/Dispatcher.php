@@ -96,6 +96,12 @@ class Dispatcher
     ];
 
     /**
+     * The one source allowed to queue `player.verify` — the identity Linker in
+     * garrison-pro. See assertPermitted for why nobody else may.
+     */
+    public const SOURCE_IDENTITY = 'identity';
+
+    /**
      * The most scrollback one `console.tail` may ask for. The same ceiling the
      * console page reads with, so the generic endpoint is never a way round it.
      */
@@ -152,7 +158,7 @@ class Dispatcher
             ]);
         }
 
-        $this->assertPermitted($actor, $server, $verb);
+        $this->assertPermitted($actor, $server, $verb, $source);
 
         $params = $this->constrain($verb, $params);
 
@@ -176,7 +182,7 @@ class Dispatcher
      * of this kind is a second call site added later that forgets the check —
      * and it is invisible, because the feature works.
      */
-    protected function assertPermitted(User $actor, Server $server, string $verb): void
+    protected function assertPermitted(User $actor, Server $server, string $verb, string $source = 'user'): void
     {
         /*
          * 🚨 player.verify is the ONE verb ordinary members may queue, and it
@@ -195,6 +201,20 @@ class Dispatcher
          * way to discover that a private server exists.
          */
         if ($verb === 'player.verify') {
+            /*
+             * 🚨 And ONLY through the Linker. The generic queue endpoint passes
+             * whatever params the browser sent, so a member could aim a
+             * "code" of their own wording at any online player — a message
+             * the game attributes to the server, delivered to somebody who
+             * never asked for it, and without the Linker's cooldown. The
+             * Linker generates the code itself; nothing else may ask.
+             */
+            if ($source !== self::SOURCE_IDENTITY) {
+                throw new ValidationException([
+                    'verb' => $this->translator->trans('ernestdefoe-garrison.api.errors.not_permitted'),
+                ]);
+            }
+
             $actor->assertRegistered();
 
             if (! $server->is_public && ! $actor->hasPermission('garrison.view')) {
