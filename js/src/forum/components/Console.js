@@ -32,7 +32,11 @@ export default class Console extends Component {
 
     this.scroller = vnode.dom.querySelector('.GarrisonConsole-out');
     this.fetch();
-    this.timer = setInterval(() => this.fetch(), 5000);
+    // A background tab is not reading the console, so it does not ask; the
+    // next tick after it is shown catches up from `since`.
+    this.timer = setInterval(() => {
+      if (!document.hidden) this.fetch();
+    }, 5000);
   }
 
   onremove(vnode) {
