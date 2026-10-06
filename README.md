@@ -231,17 +231,13 @@ licensing. See **[docs/entitlement.md](docs/entitlement.md)**.
 
 No other Flarum extension is required.
 
-## Discuss
-
-Questions, ideas and release notes: [Garrison on discuss.flarum.org](https://discuss.flarum.org/d/39866-garrison-garrison-pro-built-using-ai).
-
 ## Licence & support
+
+- **Support forum:** [Garrison on ernestdefoe.online](https://ernestdefoe.online/d/100)
+- **Flarum community:** [Garrison on discuss.flarum.org](https://discuss.flarum.org/d/39866-garrison-garrison-pro-built-using-ai)
+- **Bug reports:** [GitHub issues](https://github.com/ernestdefoe/garrison/issues)
 
 | Package | Licence |
 |---|---|
 | `ernestdefoe/garrison` (this one) | **MIT** — use it, fork it, keep it |
 | `ernestdefoe/garrison-pro` | Commercial, one licence per forum |
-
-Support is at **<https://ernestdefoe.online/d/100>**, and issues on this
-repository are welcome too. Bugs and feature requests both — every fix in the
-changelog started as somebody saying something was wrong.
