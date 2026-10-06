@@ -231,6 +231,10 @@ licensing. See **[docs/entitlement.md](docs/entitlement.md)**.
 
 No other Flarum extension is required.
 
+## Discuss
+
+Questions, ideas and release notes: [Garrison on discuss.flarum.org](https://discuss.flarum.org/d/39866-garrison-garrison-pro-built-using-ai).
+
 ## Licence & support
 
 | Package | Licence |
