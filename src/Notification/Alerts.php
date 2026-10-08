@@ -124,7 +124,7 @@ class Alerts
          */
         return $query
             ->whereHas('groups', function ($q) use ($groups) {
-                $q->whereIn($q->getModel()->getTable() . '.id', $groups);
+                $q->whereIn($q->getModel()->getTable().'.id', $groups);
             })
             ->get()
             ->all();

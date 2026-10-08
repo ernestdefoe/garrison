@@ -47,7 +47,7 @@ class PairCommand extends AbstractCommand
         $max = Edition::maxHosts();
 
         if ($max !== null && GarrisonAgent::query()->count() >= $max) {
-            $this->error('This edition of Garrison covers ' . $max . ' host. Uninstall an existing one, or install garrison-pro.');
+            $this->error('This edition of Garrison covers '.$max.' host. Uninstall an existing one, or install garrison-pro.');
 
             return 1;
         }
@@ -68,9 +68,9 @@ class PairCommand extends AbstractCommand
         // AbstractCommand offers info(), comment() and error() and NOTHING
         // else — there is no line(). Plain output goes through the output
         // interface directly.
-        $this->info('Paired "' . $agent->name . '" as agent ' . $agent->id);
+        $this->info('Paired "'.$agent->name.'" as agent '.$agent->id);
         $this->output->writeln('');
-        $this->output->writeln('  Token: ' . $plaintext);
+        $this->output->writeln('  Token: '.$plaintext);
         $this->output->writeln('');
 
         // 🚨 Said plainly, because it is true and because the alternative is a

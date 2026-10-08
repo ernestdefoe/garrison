@@ -7,19 +7,18 @@ use ErnestDefoe\Garrison\Agent\Gateway;
 use ErnestDefoe\Garrison\Agent\TokenGuard;
 use ErnestDefoe\Garrison\Api\Controller\AdminController;
 use ErnestDefoe\Garrison\Api\Controller\ConsoleController;
-use ErnestDefoe\Garrison\Entitled;
 use ErnestDefoe\Garrison\Game\Artwork;
+use ErnestDefoe\Garrison\Health\Heartbeat;
 use ErnestDefoe\Garrison\Health\Ladder;
 use ErnestDefoe\Garrison\Notification\Alerts;
-use ErnestDefoe\Garrison\Health\Heartbeat;
 use ErnestDefoe\Garrison\Notification\Webhooks;
 use ErnestDefoe\Garrison\Players\Tracker;
 use Flarum\Foundation\AbstractServiceProvider;
 use Flarum\Locale\TranslatorInterface;
-use Illuminate\Contracts\Filesystem\Factory;
-use Illuminate\Contracts\Queue\Queue;
 use Flarum\Notification\NotificationSyncer;
 use Flarum\Settings\SettingsRepositoryInterface;
+use Illuminate\Contracts\Filesystem\Factory;
+use Illuminate\Contracts\Queue\Queue;
 use Illuminate\Database\ConnectionInterface;
 use Psr\Log\LoggerInterface;
 
@@ -45,7 +44,6 @@ class GarrisonServiceProvider extends AbstractServiceProvider
         $this->container->singleton(Tracker::class, function () {
             return new Tracker();
         });
-
 
         $this->container->singleton(Gateway::class, function ($container) {
             return new Gateway(
@@ -97,7 +95,6 @@ class GarrisonServiceProvider extends AbstractServiceProvider
                 $container->make(SettingsRepositoryInterface::class)
             );
         });
-
 
         $this->container->singleton(Ladder::class, function ($container) {
             return new Ladder(

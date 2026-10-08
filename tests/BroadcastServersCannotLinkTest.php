@@ -45,7 +45,7 @@ class BroadcastServersCannotLinkTest extends TestCase
     /** The wiring: the flag the browser draws from is this method, not players_known. */
     public function testTheStatusPayloadUsesIt(): void
     {
-        $source = (string) file_get_contents(__DIR__ . '/../src/Api/Controller/ListServersController.php');
+        $source = (string) file_get_contents(__DIR__.'/../src/Api/Controller/ListServersController.php');
 
         $this->assertStringContainsString("\$row['canLink'] = \$server->canVerifyPlayers();", $source);
     }
@@ -53,7 +53,7 @@ class BroadcastServersCannotLinkTest extends TestCase
     /** And the agent's answer is stored, or the method above only ever sees null. */
     public function testTheGatewayStoresTheAgentsAnswer(): void
     {
-        $source = (string) file_get_contents(__DIR__ . '/../src/Agent/Gateway.php');
+        $source = (string) file_get_contents(__DIR__.'/../src/Agent/Gateway.php');
 
         $this->assertMatchesRegularExpression("/players_can_verify\\s*=.*\\n.*report\\['canVerify'\\]/", $source);
     }

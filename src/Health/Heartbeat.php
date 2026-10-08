@@ -131,7 +131,7 @@ class Heartbeat
     }
 
     /**
-     * ok | stalled | unknown
+     * ok | stalled | unknown.
      *
      * 🚨 `unknown` is a real answer and deliberately not `stalled`.
      *

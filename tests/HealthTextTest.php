@@ -28,7 +28,7 @@ class HealthTextTest extends TestCase
 
         $translator = new Translator('en');
         $translator->addLoader('yaml', new YamlFileLoader());
-        $translator->addResource('yaml', __DIR__ . '/../resources/locale/en.yml', 'en', 'messages+intl-icu');
+        $translator->addResource('yaml', __DIR__.'/../resources/locale/en.yml', 'en', 'messages+intl-icu');
 
         $this->text = new HealthText($translator);
     }

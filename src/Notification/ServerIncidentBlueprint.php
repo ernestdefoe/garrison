@@ -90,7 +90,7 @@ class ServerIncidentBlueprint implements BlueprintInterface, AlertableInterface,
          * which one; "Shattered Pact stopped accepting players" does not.
          */
         return $translator->trans(
-            'ernestdefoe-garrison.email.server_incident.subject.' . $this->key(),
+            'ernestdefoe-garrison.email.server_incident.subject.'.$this->key(),
             ['name' => $this->server->name]
         );
     }

@@ -134,7 +134,7 @@ class Ladder
         if ($incident !== null) {
             $incident->status = 'resolved';
             $incident->resolved_at = Carbon::now();
-            $incident->appendAction('recovered — health is ' . $server->health_state);
+            $incident->appendAction('recovered — health is '.$server->health_state);
             $incident->save();
 
             // 🚨 Told about the recovery as well as the fault. An alert that
@@ -143,7 +143,7 @@ class Ladder
             // is currently wrong.
             $this->alerts->serverIncident($server, 'recovered');
 
-            return 'resolved incident ' . $incident->id;
+            return 'resolved incident '.$incident->id;
         }
 
         return null;
@@ -198,7 +198,7 @@ class Ladder
             // stopped, and nothing else will happen until somebody acts.
             $this->alerts->serverIncident($server, 'abandoned', $server->healthSummaryText());
 
-            return 'abandoned incident ' . $incident->id;
+            return 'abandoned incident '.$incident->id;
         }
 
         $this->dispatcher->queue($actor, $server, 'server.restart', [], 'health');
@@ -210,7 +210,7 @@ class Ladder
         $server->last_remediation_at = Carbon::now();
         $server->save();
 
-        return 'restarted ' . $server->ref;
+        return 'restarted '.$server->ref;
     }
 
     protected function openIncident(Server $server): Incident
@@ -238,7 +238,7 @@ class Ladder
         $incident = new Incident();
         $incident->server_id = $server->id;
         $incident->started_at = $server->unready_since ?? Carbon::now();
-        $incident->cause = $server->healthSummaryText() ?: ('health is ' . $server->health_state);
+        $incident->cause = $server->healthSummaryText() ?: ('health is '.$server->health_state);
         $incident->detail = $server->health_checks;
         $incident->status = 'open';
         $incident->restarts = 0;

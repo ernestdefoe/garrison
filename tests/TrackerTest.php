@@ -52,7 +52,7 @@ class TrackerTest extends TestCase
             'bob',
             123,
             null,
-            "  carol  ",
+            '  carol  ',
         ]]);
 
         sort($got);

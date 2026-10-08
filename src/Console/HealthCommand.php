@@ -2,13 +2,13 @@
 
 namespace ErnestDefoe\Garrison\Console;
 
+use ErnestDefoe\Garrison\Agent\Dispatcher;
 use ErnestDefoe\Garrison\Agent\Gateway;
 use ErnestDefoe\Garrison\Game\Artwork;
-use ErnestDefoe\Garrison\Agent\Dispatcher;
+use ErnestDefoe\Garrison\Health\Heartbeat;
 use ErnestDefoe\Garrison\Health\Ladder;
 use ErnestDefoe\Garrison\Model\Server;
 use ErnestDefoe\Garrison\Players\Tracker;
-use ErnestDefoe\Garrison\Health\Heartbeat;
 use Flarum\Console\AbstractCommand;
 use Flarum\User\User;
 
@@ -65,7 +65,7 @@ class HealthCommand extends AbstractCommand
             $what = $this->ladder->evaluate($server, $actor);
 
             if ($what !== null) {
-                $this->info($server->ref . ': ' . $what);
+                $this->info($server->ref.': '.$what);
                 $acted++;
             }
 
@@ -89,7 +89,7 @@ class HealthCommand extends AbstractCommand
         });
 
         if ($closed > 0) {
-            $this->info('closed ' . $closed . ' play session(s) on servers that stopped reporting');
+            $this->info('closed '.$closed.' play session(s) on servers that stopped reporting');
         }
 
         /**
@@ -102,7 +102,7 @@ class HealthCommand extends AbstractCommand
         $got = $this->artwork->backfill();
 
         if ($got > 0) {
-            $this->info('fetched artwork for ' . $got . ' server(s)');
+            $this->info('fetched artwork for '.$got.' server(s)');
         }
 
         /**
@@ -118,7 +118,7 @@ class HealthCommand extends AbstractCommand
             $pruned = $this->gateway->pruneConsole();
 
             if ($pruned > 0) {
-                $this->info('pruned ' . $pruned . ' old console line(s)');
+                $this->info('pruned '.$pruned.' old console line(s)');
             }
         }
 
@@ -157,7 +157,7 @@ class HealthCommand extends AbstractCommand
         $expired = $this->dispatcher->expireStale();
 
         if ($expired > 0) {
-            $this->info('expired ' . $expired . ' command(s) an agent never answered');
+            $this->info('expired '.$expired.' command(s) an agent never answered');
         }
 
         $this->heartbeat->beat();

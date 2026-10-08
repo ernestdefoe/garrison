@@ -6,12 +6,12 @@ use Carbon\Carbon;
 use ErnestDefoe\Garrison\Agent\TokenGuard;
 use ErnestDefoe\Garrison\Game\Artwork;
 use ErnestDefoe\Garrison\Game\Catalog;
+use ErnestDefoe\Garrison\Health\Heartbeat;
 use ErnestDefoe\Garrison\Model\GarrisonAgent;
 use ErnestDefoe\Garrison\Model\Identity;
 use ErnestDefoe\Garrison\Model\Incident;
 use ErnestDefoe\Garrison\Model\Schedule;
 use ErnestDefoe\Garrison\Model\Server;
-use ErnestDefoe\Garrison\Health\Heartbeat;
 use Flarum\Foundation\ValidationException;
 use Flarum\Http\RequestUtil;
 use Flarum\Locale\TranslatorInterface;
@@ -216,7 +216,7 @@ class AdminController implements RequestHandlerInterface
         return new JsonResponse(['ok' => true]);
     }
 
-          /**
+    /**
      * Server settings an operator owns — as opposed to the ones the agent
      * reports, which are never editable here.
      */
@@ -318,7 +318,7 @@ class AdminController implements RequestHandlerInterface
 
             if ($url === null) {
                 throw new ValidationException([
-                    'icon' => $this->translator->trans('ernestdefoe-garrison.api.errors.' . ($reason ?: 'fetch_failed')),
+                    'icon' => $this->translator->trans('ernestdefoe-garrison.api.errors.'.($reason ?: 'fetch_failed')),
                 ]);
             }
 

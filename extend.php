@@ -21,16 +21,16 @@ use Illuminate\Console\Scheduling\Event;
 $extenders = [
     (new Extend\ServiceProvider())->register(GarrisonServiceProvider::class),
 
-    (new Extend\Locales(__DIR__ . '/resources/locale')),
+    (new Extend\Locales(__DIR__.'/resources/locale')),
 
     (new Extend\Frontend('admin'))
-        ->js(__DIR__ . '/js/dist/admin.js')
-        ->css(__DIR__ . '/less/admin.less'),
+        ->js(__DIR__.'/js/dist/admin.js')
+        ->css(__DIR__.'/less/admin.less'),
 
     (new Extend\Frontend('forum'))
-        ->js(__DIR__ . '/js/dist/forum.js')
-        ->jsDirectory(__DIR__ . '/js/dist/forum')
-        ->css(__DIR__ . '/less/forum.less')
+        ->js(__DIR__.'/js/dist/forum.js')
+        ->jsDirectory(__DIR__.'/js/dist/forum')
+        ->css(__DIR__.'/less/forum.less')
 
         /*
          * 🚨 The status page needs registering on the PHP side as well as in
@@ -170,7 +170,7 @@ $extenders = [
      * never arrives.
      */
     (new Extend\View())
-        ->namespace('ernestdefoe-garrison', __DIR__ . '/views'),
+        ->namespace('ernestdefoe-garrison', __DIR__.'/views'),
 
     /*
      * 🚨 The blueprint must ALSO implement AlertableInterface and

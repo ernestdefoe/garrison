@@ -83,7 +83,7 @@ final class HealthText
             return null;
         }
 
-        $key = self::PREFIX . $kind . '.' . $id;
+        $key = self::PREFIX.$kind.'.'.$id;
         $out = $this->translator->trans($key, $this->scalars($params));
 
         // Flarum's translator hands the key back on a miss: an ID this forum
@@ -129,19 +129,19 @@ final class HealthText
 
         // Below a minute the seconds are the whole answer; above, they are noise.
         if ($hours === 0 && $minutes === 0) {
-            return $this->translator->trans(self::PREFIX . 'seconds', ['count' => (int) round($seconds)]);
+            return $this->translator->trans(self::PREFIX.'seconds', ['count' => (int) round($seconds)]);
         }
 
         $forum = 'ernestdefoe-garrison.forum.duration.';
 
         if ($hours === 0) {
-            return $this->translator->trans($forum . 'minutes', ['count' => $minutes]);
+            return $this->translator->trans($forum.'minutes', ['count' => $minutes]);
         }
 
         if ($minutes === 0) {
-            return $this->translator->trans($forum . 'hours', ['count' => $hours]);
+            return $this->translator->trans($forum.'hours', ['count' => $hours]);
         }
 
-        return $this->translator->trans($forum . 'both', ['hours' => $hours, 'minutes' => $minutes]);
+        return $this->translator->trans($forum.'both', ['hours' => $hours, 'minutes' => $minutes]);
     }
 }

@@ -21,7 +21,7 @@ class AgentEventsReachTheConsoleTest extends TestCase
 {
     public function testThePollControllerReadsEvents(): void
     {
-        $source = (string) file_get_contents(__DIR__ . '/../src/Api/Controller/AgentPollController.php');
+        $source = (string) file_get_contents(__DIR__.'/../src/Api/Controller/AgentPollController.php');
 
         $this->assertStringContainsString(
             "\$body['events']",
@@ -42,7 +42,7 @@ class AgentEventsReachTheConsoleTest extends TestCase
          * console. If a key is added there, it must be read here too, or it
          * will be accepted and discarded exactly as events were.
          */
-        $source = (string) file_get_contents(__DIR__ . '/../src/Api/Controller/AgentPollController.php');
+        $source = (string) file_get_contents(__DIR__.'/../src/Api/Controller/AgentPollController.php');
 
         foreach (['info', 'servers', 'results', 'events', 'console'] as $key) {
             $this->assertStringContainsString(
@@ -55,7 +55,7 @@ class AgentEventsReachTheConsoleTest extends TestCase
 
     public function testConsoleEventsAreFoldedIntoTheConsole(): void
     {
-        $source = (string) file_get_contents(__DIR__ . '/../src/Agent/Gateway.php');
+        $source = (string) file_get_contents(__DIR__.'/../src/Agent/Gateway.php');
 
         // recordEvents must delegate to recordConsole rather than writing its
         // own rows: two writers would drift on truncation and timestamps.

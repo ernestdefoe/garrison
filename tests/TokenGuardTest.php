@@ -20,7 +20,7 @@ class TokenGuardTest extends TestCase
         $this->assertStringNotContainsString(substr($plain, 2), $hash, 'the secret is stored in the clear');
 
         $this->assertTrue(TokenGuard::matches(substr($plain, 2), $hash));
-        $this->assertFalse(TokenGuard::matches(substr($plain, 2) . 'x', $hash));
+        $this->assertFalse(TokenGuard::matches(substr($plain, 2).'x', $hash));
         $this->assertFalse(TokenGuard::matches('', $hash));
     }
 

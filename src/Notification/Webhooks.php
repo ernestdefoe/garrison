@@ -45,7 +45,7 @@ class Webhooks
         $body = str_contains($url, 'discord.com') || str_contains($url, 'discordapp.com')
             ? ['content' => $text]
             : [
-                'event' => 'server.' . $state,
+                'event' => 'server.'.$state,
                 'server' => $server->name,
                 'serverId' => $server->id,
                 'summary' => $summary,
@@ -78,7 +78,7 @@ class Webhooks
             default => 'unknown',
         };
 
-        return $this->translator->trans('ernestdefoe-garrison.webhook.' . $key, [
+        return $this->translator->trans('ernestdefoe-garrison.webhook.'.$key, [
             'name' => $server->name,
             'state' => $state,
 
@@ -91,8 +91,8 @@ class Webhooks
              * emails do.
              */
             'url' => $this->url->to('forum')->route('garrison.server', ['id' => $server->id]),
-        ]) . ($summary && in_array($state, ['unready', 'down'], true)
-            ? ' — ' . $summary
+        ]).($summary && in_array($state, ['unready', 'down'], true)
+            ? ' — '.$summary
             : '');
     }
 

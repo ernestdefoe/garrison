@@ -23,7 +23,7 @@ class StaleCommandsAreExpiredTest extends TestCase
 {
     public function testTheScheduledHealthCommandExpiresThem(): void
     {
-        $source = (string) file_get_contents(__DIR__ . '/../src/Console/HealthCommand.php');
+        $source = (string) file_get_contents(__DIR__.'/../src/Console/HealthCommand.php');
 
         $this->assertStringContainsString(
             'expireStale()',
@@ -38,7 +38,7 @@ class StaleCommandsAreExpiredTest extends TestCase
         // decision, not two schedules quietly racing to expire the same rows.
         $callers = [];
 
-        foreach (glob(__DIR__ . '/../src/**/*.php') ?: [] as $file) {
+        foreach (glob(__DIR__.'/../src/**/*.php') ?: [] as $file) {
             if (str_contains((string) file_get_contents($file), 'expireStale(')) {
                 $callers[] = basename($file);
             }

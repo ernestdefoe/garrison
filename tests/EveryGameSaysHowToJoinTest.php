@@ -21,7 +21,7 @@ class EveryGameSaysHowToJoinTest extends TestCase
     /** @return array<string, mixed> */
     private function locale(): array
     {
-        $yaml = (string) file_get_contents(__DIR__ . '/../resources/locale/en.yml');
+        $yaml = (string) file_get_contents(__DIR__.'/../resources/locale/en.yml');
 
         // Deliberately not a YAML parser: this only needs the keys under
         // `connect:`, and the test should not gain a dependency to read them.

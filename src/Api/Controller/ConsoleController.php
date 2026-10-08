@@ -2,7 +2,6 @@
 
 namespace ErnestDefoe\Garrison\Api\Controller;
 
-use ErnestDefoe\Garrison\Agent\Dispatcher;
 use ErnestDefoe\Garrison\Model\Server;
 use Flarum\Http\RequestUtil;
 use Illuminate\Database\ConnectionInterface;

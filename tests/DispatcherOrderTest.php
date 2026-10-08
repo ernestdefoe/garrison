@@ -21,7 +21,7 @@ class DispatcherOrderTest extends TestCase
 {
     private function source(): string
     {
-        return (string) file_get_contents(__DIR__ . '/../src/Agent/Dispatcher.php');
+        return (string) file_get_contents(__DIR__.'/../src/Agent/Dispatcher.php');
     }
 
     private function positionOf(string $needle): int
@@ -104,7 +104,7 @@ class DispatcherOrderTest extends TestCase
      */
     private function agentVerbs(): array
     {
-        $source = (string) file_get_contents(__DIR__ . '/../agent/internal/protocol/protocol.go');
+        $source = (string) file_get_contents(__DIR__.'/../agent/internal/protocol/protocol.go');
 
         preg_match_all('/Verb\s*=\s*"([a-z.]+)"/', $source, $matches);
 

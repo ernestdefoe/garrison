@@ -91,6 +91,6 @@ class Marks
             return mb_strtoupper(mb_substr($words[0], 0, 1));
         }
 
-        return mb_strtoupper(mb_substr($words[0], 0, 1) . mb_substr($words[1], 0, 1));
+        return mb_strtoupper(mb_substr($words[0], 0, 1).mb_substr($words[1], 0, 1));
     }
 }

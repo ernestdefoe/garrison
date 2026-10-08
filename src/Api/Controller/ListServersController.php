@@ -2,9 +2,9 @@
 
 namespace ErnestDefoe\Garrison\Api\Controller;
 
+use ErnestDefoe\Garrison\Game\Catalog;
 use ErnestDefoe\Garrison\Game\Marks;
 use ErnestDefoe\Garrison\Model\Identity;
-use ErnestDefoe\Garrison\Game\Catalog;
 use ErnestDefoe\Garrison\Model\Server;
 use Flarum\Http\RequestUtil;
 use Laminas\Diactoros\Response\JsonResponse;

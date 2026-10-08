@@ -169,11 +169,11 @@ class Catalog
         $candidates = [];
 
         if ($appId !== null) {
-            $base = 'https://cdn.cloudflare.steamstatic.com/steam/apps/' . $appId . '/';
+            $base = 'https://cdn.cloudflare.steamstatic.com/steam/apps/'.$appId.'/';
 
-            $candidates[] = $base . 'logo.png';
-            $candidates[] = $base . 'capsule_231x87.jpg';
-            $candidates[] = $base . 'header.jpg';
+            $candidates[] = $base.'logo.png';
+            $candidates[] = $base.'capsule_231x87.jpg';
+            $candidates[] = $base.'header.jpg';
         }
 
         foreach (static::EXPLICIT[$key] ?? [] as $url) {

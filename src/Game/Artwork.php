@@ -4,7 +4,6 @@ namespace ErnestDefoe\Garrison\Game;
 
 use Carbon\Carbon;
 use ErnestDefoe\Garrison\Model\Server;
-use ErnestDefoe\Garrison\Game\RemoteImage;
 use Illuminate\Contracts\Filesystem\Factory;
 
 /**
@@ -187,7 +186,7 @@ class Artwork
     public function keep(Server $server, string $bytes, string $extension): string
     {
         $disk = $this->filesystem->disk('flarum-assets');
-        $path = 'garrison/' . $server->id . '-' . substr(bin2hex(random_bytes(8)), 0, 12) . '.' . $extension;
+        $path = 'garrison/'.$server->id.'-'.substr(bin2hex(random_bytes(8)), 0, 12).'.'.$extension;
 
         // The old icon goes only AFTER the new one is safely written, so a
         // failure never leaves a server with no image at all.
@@ -199,7 +198,7 @@ class Artwork
         $server->save();
 
         if ($previous) {
-            $old = 'garrison/' . basename(parse_url($previous, PHP_URL_PATH) ?: '');
+            $old = 'garrison/'.basename(parse_url($previous, PHP_URL_PATH) ?: '');
 
             if (str_starts_with($old, 'garrison/') && $disk->exists($old)) {
                 $disk->delete($old);

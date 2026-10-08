@@ -157,7 +157,7 @@ class DispatcherRefusesTest extends TestCase
      */
     public function testTheGenericEndpointDoesNotChooseItsSource(): void
     {
-        $source = (string) file_get_contents(__DIR__ . '/../src/Api/Controller/QueueCommandController.php');
+        $source = (string) file_get_contents(__DIR__.'/../src/Api/Controller/QueueCommandController.php');
 
         $this->assertStringNotContainsString('SOURCE_IDENTITY', $source);
         $this->assertStringNotContainsString("'identity'", $source);

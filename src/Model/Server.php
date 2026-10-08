@@ -100,7 +100,7 @@ class Server extends AbstractModel
             return $query;
         }
 
-        return $query->whereIn($this->getTable() . '.id', $ids);
+        return $query->whereIn($this->getTable().'.id', $ids);
     }
 
     /**

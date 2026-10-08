@@ -37,7 +37,7 @@ class ServerStatusBlock implements BlockInterface
 
     private function t(string $key): string
     {
-        return $this->translator->trans('ernestdefoe-garrison.forum.block.' . $key);
+        return $this->translator->trans('ernestdefoe-garrison.forum.block.'.$key);
     }
 
     public function type(): string

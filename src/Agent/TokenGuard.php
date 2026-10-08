@@ -91,7 +91,7 @@ class TokenGuard
 
     public static function hash(string $secret): string
     {
-        return self::SHA256 . hash('sha256', $secret);
+        return self::SHA256.hash('sha256', $secret);
     }
 
     private const SHA256 = 'sha256:';
@@ -107,6 +107,6 @@ class TokenGuard
     {
         $secret = bin2hex(random_bytes(24));
 
-        return [$agentId . '.' . $secret, self::hash($secret)];
+        return [$agentId.'.'.$secret, self::hash($secret)];
     }
 }
