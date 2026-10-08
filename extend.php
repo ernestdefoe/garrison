@@ -21,7 +21,7 @@ use Illuminate\Console\Scheduling\Event;
 $extenders = [
     (new Extend\ServiceProvider())->register(GarrisonServiceProvider::class),
 
-    (new Extend\Locales(__DIR__.'/resources/locale')),
+    new Extend\Locales(__DIR__.'/resources/locale'),
 
     (new Extend\Frontend('admin'))
         ->js(__DIR__.'/js/dist/admin.js')
@@ -147,7 +147,7 @@ $extenders = [
      * not the second. Folding them together is a decision that cannot be
      * undone by configuration.
      */
-    (new Extend\Policy()),
+    new Extend\Policy(),
 
     /*
      * 🚨 REGISTERED SO THAT NOTIFICATIONS CAN SERIALIZE — not so that anybody
@@ -160,7 +160,7 @@ $extenders = [
      * user on the forum, not just Garrison's. See ServerResource's docblock;
      * this same bug shipped once already in another extension.
      */
-    (new Extend\ApiResource(ServerResource::class)),
+    new Extend\ApiResource(ServerResource::class),
 
     /*
      * 🚨 The email templates live under a NAMESPACE, and the blueprint names
