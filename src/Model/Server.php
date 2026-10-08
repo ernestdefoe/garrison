@@ -10,6 +10,56 @@ use Flarum\User\User;
 
 /**
  * The forum's cached view of one game server.
+ *
+ * @property int $id
+ * @property int $agent_id
+ * @property string $ref
+ * @property string $name
+ * @property string $driver
+ * @property string $state
+ * @property string|null $state_detail
+ * @property int|null $pid
+ * @property \Carbon\Carbon|null $running_since
+ * @property float|null $cpu_percent
+ * @property int|null $memory_bytes
+ * @property int|null $memory_limit
+ * @property string|null $stats_source
+ * @property int|null $players_online
+ * @property int|null $players_max
+ * @property \Carbon\Carbon|null $last_status_at
+ * @property bool $is_public
+ * @property int|null $join_group_id
+ * @property string|null $join_address
+ * @property string|null $join_password
+ * @property string|null $join_code
+ * @property \Carbon\Carbon $created_at
+ * @property \Carbon\Carbon|null $updated_at
+ * @property string|null $game
+ * @property string|null $icon_url
+ * @property string|null $health_state
+ * @property string|null $health_summary
+ * @property string|null $health_checks
+ * @property \Carbon\Carbon|null $unready_since
+ * @property int $unready_polls
+ * @property \Carbon\Carbon|null $last_remediation_at
+ * @property bool $needs_attention
+ * @property bool $auto_remediate
+ * @property int $icon_attempts
+ * @property int $backup_every_hours
+ * @property \Carbon\Carbon|null $backup_queued_at
+ * @property string|null $backups
+ * @property bool $offsite_configured
+ * @property string|null $offsite_bucket
+ * @property \Carbon\Carbon|null $offsite_last_at
+ * @property bool $offsite_last_ok
+ * @property string|null $offsite_last_error
+ * @property string|null $players_online_names
+ * @property bool $players_known
+ * @property string|null $health_summary_id
+ * @property string|null $health_summary_params
+ * @property bool|null $players_can_verify
+ * @property-read GarrisonAgent|null $agent
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, PlaySession> $sessions
  */
 class Server extends AbstractModel
 {

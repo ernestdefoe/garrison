@@ -11,6 +11,14 @@ use Flarum\Database\AbstractModel;
  * 🚨 `PlaySession`, not `Session`. Flarum and Laravel both have a Session and
  * the collision is not a compile error — it is an import somebody gets wrong
  * once, at three in the morning, and then spends an hour on.
+ *
+ * @property int $id
+ * @property int $server_id
+ * @property string $player
+ * @property \Carbon\Carbon $started_at
+ * @property \Carbon\Carbon|null $ended_at
+ * @property int $seconds
+ * @property-read Server|null $server
  */
 class PlaySession extends AbstractModel
 {

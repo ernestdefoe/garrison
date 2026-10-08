@@ -13,6 +13,22 @@ use Flarum\Database\AbstractModel;
  * runner asks it two questions — is this due, is a warning due — and acts on
  * the answers. Keeping the arithmetic here is what makes it testable without a
  * database, a forum, or a host.
+ *
+ * @property int $id
+ * @property int $server_id
+ * @property string $kind
+ * @property int $at_minute
+ * @property string $days
+ * @property string $timezone
+ * @property string|null $payload
+ * @property int $warn_minutes
+ * @property string|null $warn_payload
+ * @property bool $enabled
+ * @property \Carbon\Carbon|null $last_run_at
+ * @property \Carbon\Carbon|null $last_warned_at
+ * @property \Carbon\Carbon|null $created_at
+ * @property \Carbon\Carbon|null $updated_at
+ * @property-read Server|null $server
  */
 class Schedule extends AbstractModel
 {

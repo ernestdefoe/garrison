@@ -12,6 +12,17 @@ use Flarum\Database\AbstractModel;
  * "the server was down" tells an operator nothing they did not already know.
  * One that says "unready at 05:11, restarted at 05:14, healthy at 05:16" is
  * the difference between trusting automatic remediation and switching it off.
+ *
+ * @property int $id
+ * @property int $server_id
+ * @property \Carbon\Carbon $started_at
+ * @property \Carbon\Carbon|null $resolved_at
+ * @property string $cause
+ * @property string|null $detail
+ * @property string|null $actions
+ * @property string $status
+ * @property int $restarts
+ * @property-read Server|null $server
  */
 class Incident extends AbstractModel
 {

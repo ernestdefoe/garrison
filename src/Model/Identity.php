@@ -8,6 +8,18 @@ use Flarum\User\User;
 
 /**
  * A forum account and the in-game player it belongs to.
+ *
+ * @property int $id
+ * @property int $user_id
+ * @property int $server_id
+ * @property string $player
+ * @property \Carbon\Carbon|null $verified_at
+ * @property string|null $code_hash
+ * @property \Carbon\Carbon|null $code_expires_at
+ * @property int $attempts
+ * @property \Carbon\Carbon|null $created_at
+ * @property-read User|null $user
+ * @property-read Server|null $server
  */
 class Identity extends AbstractModel
 {
