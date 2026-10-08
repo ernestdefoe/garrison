@@ -9,14 +9,15 @@
   infrastructure, so it actually gets run.
 -->
 <phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
-         bootstrap="tests/bootstrap.php"
+         xsi:noNamespaceSchemaLocation="../vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="bootstrap.php"
          colors="true"
          failOnWarning="true"
          failOnRisky="true">
     <testsuites>
         <testsuite name="unit">
-            <directory suffix="Test.php">tests</directory>
+            <directory suffix="Test.php">.</directory>
+            <exclude>./integration</exclude>
         </testsuite>
     </testsuites>
 </phpunit>

@@ -20,7 +20,7 @@
 # harmless in itself and it is somebody's file listing, in a product they paid
 # for, that says nobody checked what went in the box.
 /vendor/
-/.phpunit.result.cache
+.phpunit.result.cache
 /composer.lock
 
 # 🚨 node_modules was tracked until 1.1.0 — 8,396 files, 98% of everything in
@@ -30,3 +30,4 @@
 # on purpose: Flarum loads it and nothing rebuilds it on install, which is why
 # CI fails if it has drifted from its source.
 js/node_modules/
+/tests/integration/tmp
