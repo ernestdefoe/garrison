@@ -123,7 +123,6 @@ class HealthCommand extends AbstractCommand
         }
 
         /**
-        /**
          * 🚨 Garrison's own machinery proving itself, on the same tick.
          *
          * Two things this product completely depends on and does not own: the
