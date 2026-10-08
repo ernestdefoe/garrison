@@ -130,11 +130,7 @@ function registerPageBuilder(app, makeContent) {
       view(vnode) {
         const settings = vnode.attrs?.block?.settings || {};
 
-        return (
-          <div className={'GarrisonPageBuilderBlock' + (settings.compact ? ' is-compact' : '')}>
-            {makeContent('page-builder')}
-          </div>
-        );
+        return <div className={'GarrisonPageBuilderBlock' + (settings.compact ? ' is-compact' : '')}>{makeContent('page-builder')}</div>;
       },
     },
   });

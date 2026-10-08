@@ -13,8 +13,7 @@
  */
 const PATHS = {
   // A longship's prow and shield line.
-  longship:
-    'M2 15c3 3 6 4 10 4s7-1 10-4l-2-1H4l-2 1zM4 13h16l-2-4H6l-2 4zM12 9V3M9 5h6',
+  longship: 'M2 15c3 3 6 4 10 4s7-1 10-4l-2-1H4l-2 1zM4 13h16l-2-4H6l-2 4zM12 9V3M9 5h6',
   // A cube in isometric.
   block: 'M12 2 3 7v10l9 5 9-5V7l-9-5zM12 2v10m0 0L3 7m9 5 9-5m-9 5v10',
   // A capture sphere: a band across a circle.
@@ -30,8 +29,7 @@ const PATHS = {
   // A pickaxe.
   pickaxe: 'M3 7c5-4 13-4 18 0M12 5v15M8 9c2-1 6-1 8 0',
   // Plain server: the unknown-game fallback.
-  server:
-    'M4 5h16v5H4zM4 14h16v5H4zM7 7.5h.01M7 16.5h.01',
+  server: 'M4 5h16v5H4zM4 14h16v5H4zM7 7.5h.01M7 16.5h.01',
 };
 
 /**

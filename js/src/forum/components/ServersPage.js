@@ -45,9 +45,7 @@ export default class ServersPage extends Page {
         <div className="container">
           <div className="sideNavContainer">
             <div className="IndexPage-results sideNavOffset">
-              <h2 className="GarrisonPage-title">
-                {app.translator.trans('ernestdefoe-garrison.forum.title')}
-              </h2>
+              <h2 className="GarrisonPage-title">{app.translator.trans('ernestdefoe-garrison.forum.title')}</h2>
               {this.body()}
             </div>
           </div>
@@ -66,11 +64,7 @@ export default class ServersPage extends Page {
     if (!servers.length) {
       return (
         <p className="GarrisonPage-empty">
-          {app.translator.trans(
-            lastError()
-              ? 'ernestdefoe-garrison.forum.unreachable'
-              : 'ernestdefoe-garrison.forum.no_servers'
-          )}
+          {app.translator.trans(lastError() ? 'ernestdefoe-garrison.forum.unreachable' : 'ernestdefoe-garrison.forum.no_servers')}
         </p>
       );
     }
@@ -98,9 +92,7 @@ export default class ServersPage extends Page {
               {s.name}
             </a>
           </h3>
-          <span className="GarrisonCard-state">
-            {stateLabel(s.state)}
-          </span>
+          <span className="GarrisonCard-state">{stateLabel(s.state)}</span>
           <ServerControls server={s} />
         </div>
 
@@ -129,7 +121,10 @@ export default class ServersPage extends Page {
           else on the card. A fact that is not currently a fact is omitted.
         */}
         <dl className="GarrisonCard-facts">
-          {this.fact('players', running && s.playersOnline != null ? (s.playersMax ? `${s.playersOnline}/${s.playersMax}` : String(s.playersOnline)) : null)}
+          {this.fact(
+            'players',
+            running && s.playersOnline != null ? (s.playersMax ? `${s.playersOnline}/${s.playersMax}` : String(s.playersOnline)) : null
+          )}
           {this.fact('cpu', running && s.cpuPercent != null ? `${s.cpuPercent}%` : null)}
           {this.fact('memory', running && s.memoryBytes != null ? bytes(s.memoryBytes) + (s.statsApproximate ? ' ≈' : '') : null)}
           {this.fact('uptime', running && s.runningSince ? humanTime(s.runningSince) : null)}
@@ -156,14 +151,10 @@ export default class ServersPage extends Page {
 
         {s.joinAddress || s.joinCode ? (
           <div className="GarrisonCard-join">
-            <span className="GarrisonCard-joinLabel">
-              {app.translator.trans('ernestdefoe-garrison.forum.join')}
-            </span>
+            <span className="GarrisonCard-joinLabel">{app.translator.trans('ernestdefoe-garrison.forum.join')}</span>
             {s.joinAddress ? <code className="GarrisonCard-joinValue">{s.joinAddress}</code> : null}
             {s.joinCode ? (
-              <code className="GarrisonCard-joinValue">
-                {app.translator.trans('ernestdefoe-garrison.forum.join_code', { code: s.joinCode })}
-              </code>
+              <code className="GarrisonCard-joinValue">{app.translator.trans('ernestdefoe-garrison.forum.join_code', { code: s.joinCode })}</code>
             ) : null}
           </div>
         ) : null}
@@ -216,11 +207,7 @@ export default class ServersPage extends Page {
     }
 
     if (running && (s.health === 'unknown' || !s.health)) {
-      return (
-        <p className="GarrisonHealth GarrisonHealth--unknown">
-          {app.translator.trans('ernestdefoe-garrison.forum.health.unchecked')}
-        </p>
-      );
+      return <p className="GarrisonHealth GarrisonHealth--unknown">{app.translator.trans('ernestdefoe-garrison.forum.health.unchecked')}</p>;
     }
 
     return null;
@@ -246,10 +233,6 @@ export default class ServersPage extends Page {
   fact(key, value) {
     if (value === null || value === undefined || value === '') return null;
 
-    return [
-      <dt key={key + '-t'}>{app.translator.trans(`ernestdefoe-garrison.forum.fact.${key}`)}</dt>,
-      <dd key={key + '-d'}>{value}</dd>,
-    ];
+    return [<dt key={key + '-t'}>{app.translator.trans(`ernestdefoe-garrison.forum.fact.${key}`)}</dt>, <dd key={key + '-d'}>{value}</dd>];
   }
 }
-

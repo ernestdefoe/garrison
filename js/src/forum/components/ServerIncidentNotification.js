@@ -43,9 +43,7 @@ export default class ServerIncidentNotification extends Notification {
   href() {
     const subject = this.attrs.notification.subject();
 
-    return subject
-      ? app.route('garrison.server', { id: subject.id() })
-      : app.route('garrison');
+    return subject ? app.route('garrison.server', { id: subject.id() }) : app.route('garrison');
   }
 
   content() {

@@ -75,17 +75,8 @@ export default class ServerPage extends Page {
     if (!s) {
       return (
         <div className="GarrisonServerPage-missing">
-          <p>
-            {app.translator.trans(
-              lastError()
-                ? 'ernestdefoe-garrison.forum.unreachable'
-                : 'ernestdefoe-garrison.forum.server_not_here'
-            )}
-          </p>
-          {LinkButton.component(
-            { href: app.route('garrison'), className: 'Button' },
-            app.translator.trans('ernestdefoe-garrison.forum.back_to_all')
-          )}
+          <p>{app.translator.trans(lastError() ? 'ernestdefoe-garrison.forum.unreachable' : 'ernestdefoe-garrison.forum.server_not_here')}</p>
+          {LinkButton.component({ href: app.route('garrison'), className: 'Button' }, app.translator.trans('ernestdefoe-garrison.forum.back_to_all'))}
         </div>
       );
     }
@@ -289,9 +280,11 @@ export default class ServerPage extends Page {
    */
   join(s) {
     // A game with no written instructions gets none, not the raw key.
-    const steps = s.game ? transOrNull(`ernestdefoe-garrison.forum.connect.${s.game}`, {
-      address: <code>{s.joinAddress || this.addressHint(s)}</code>,
-    }) : null;
+    const steps = s.game
+      ? transOrNull(`ernestdefoe-garrison.forum.connect.${s.game}`, {
+          address: <code>{s.joinAddress || this.addressHint(s)}</code>,
+        })
+      : null;
 
     if (!steps && !s.joinAddress && !s.joinCode && !s.joinPassword) return null;
 
@@ -315,15 +308,11 @@ export default class ServerPage extends Page {
         </dl>
 
         {!s.joinAddress && s.defaultPort ? (
-          <p className="GarrisonServerPage-portHint">
-            {app.translator.trans('ernestdefoe-garrison.forum.join_usual_port', { port: s.defaultPort })}
-          </p>
+          <p className="GarrisonServerPage-portHint">{app.translator.trans('ernestdefoe-garrison.forum.join_usual_port', { port: s.defaultPort })}</p>
         ) : null}
 
         {!s.joinAddress && !s.joinCode ? (
-          <p className="GarrisonServerPage-joinMissing">
-            {app.translator.trans('ernestdefoe-garrison.forum.join_no_details')}
-          </p>
+          <p className="GarrisonServerPage-joinMissing">{app.translator.trans('ernestdefoe-garrison.forum.join_no_details')}</p>
         ) : null}
       </div>
     );
@@ -350,7 +339,10 @@ export default class ServerPage extends Page {
   facts(s, running) {
     return (
       <dl className="GarrisonServerPage-facts" key="facts">
-        {this.fact('players', running && s.playersOnline != null ? (s.playersMax ? `${s.playersOnline}/${s.playersMax}` : String(s.playersOnline)) : null)}
+        {this.fact(
+          'players',
+          running && s.playersOnline != null ? (s.playersMax ? `${s.playersOnline}/${s.playersMax}` : String(s.playersOnline)) : null
+        )}
         {this.fact('cpu', running && s.cpuPercent != null ? `${s.cpuPercent}%` : null)}
         {this.fact('memory', running && s.memoryBytes != null ? bytes(s.memoryBytes) + (s.statsApproximate ? ' ≈' : '') : null)}
         {this.fact('uptime', running && s.runningSince ? humanTime(s.runningSince) : null)}
@@ -363,16 +355,10 @@ export default class ServerPage extends Page {
   fact(key, value) {
     if (value === null || value === undefined || value === '') return null;
 
-    return [
-      <dt key={key + '-t'}>{app.translator.trans(`ernestdefoe-garrison.forum.fact.${key}`)}</dt>,
-      <dd key={key + '-d'}>{value}</dd>,
-    ];
+    return [<dt key={key + '-t'}>{app.translator.trans(`ernestdefoe-garrison.forum.fact.${key}`)}</dt>, <dd key={key + '-d'}>{value}</dd>];
   }
 
   pair(key, value) {
-    return [
-      <dt key={key + '-t'}>{app.translator.trans(`ernestdefoe-garrison.forum.${key}`)}</dt>,
-      <dd key={key + '-d'}>{value}</dd>,
-    ];
+    return [<dt key={key + '-t'}>{app.translator.trans(`ernestdefoe-garrison.forum.${key}`)}</dt>, <dd key={key + '-d'}>{value}</dd>];
   }
 }

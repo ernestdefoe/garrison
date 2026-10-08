@@ -82,7 +82,12 @@ export default class GarrisonPage extends ExtensionPage {
         <code className="GarrisonAdmin-tokenValue">{this.newToken.token}</code>
         <p className="GarrisonAdmin-tokenHelp">{this.t('token_next')}</p>
         {Button.component(
-          { className: 'Button', onclick: () => { this.newToken = null; } },
+          {
+            className: 'Button',
+            onclick: () => {
+              this.newToken = null;
+            },
+          },
           this.t('token_copied')
         )}
       </div>
@@ -152,10 +157,7 @@ export default class GarrisonPage extends ExtensionPage {
      * of ours. `machinery()` returns null for a verdict the payload did not
      * carry, which is exactly what an older agent or a partial response gives.
      */
-    return [
-      this.machinery('scheduler', h.scheduler),
-      this.machinery('queue', h.queue),
-    ].filter(Boolean);
+    return [this.machinery('scheduler', h.scheduler), this.machinery('queue', h.queue)].filter(Boolean);
   }
 
   /**
@@ -177,18 +179,14 @@ export default class GarrisonPage extends ExtensionPage {
 
     return (
       <div className={'GarrisonAdmin-delivery GarrisonAdmin-delivery--' + tone} key={what}>
-        <div className="GarrisonAdmin-delivery-headline">
-          {app.translator.trans(`ernestdefoe-garrison.admin.machinery.${what}.${status.state}`)}
-        </div>
+        <div className="GarrisonAdmin-delivery-headline">{app.translator.trans(`ernestdefoe-garrison.admin.machinery.${what}.${status.state}`)}</div>
 
         {/*
           🚨 The fix, in the same block as the problem. "Alerts are not getting
           through" without the next sentence is a puzzle; with it, it is a task.
         */}
         {status.state === 'stalled' ? (
-          <div className="GarrisonAdmin-meta">
-            {app.translator.trans(`ernestdefoe-garrison.admin.machinery.${what}.stalled_help`)}
-          </div>
+          <div className="GarrisonAdmin-meta">{app.translator.trans(`ernestdefoe-garrison.admin.machinery.${what}.stalled_help`)}</div>
         ) : null}
 
         {status.at ? (
@@ -211,7 +209,9 @@ export default class GarrisonPage extends ExtensionPage {
             id="garrison-new-host"
             placeholder={this.t('host_name_placeholder')}
             value={this.hostName || ''}
-            oninput={(e) => { this.hostName = e.target.value; }}
+            oninput={(e) => {
+              this.hostName = e.target.value;
+            }}
           />
           {Button.component(
             {
@@ -235,17 +235,12 @@ export default class GarrisonPage extends ExtensionPage {
                   <span className="GarrisonAdmin-meta">
                     {/* An agent that has gone quiet is itself an incident — it
                         is how you find out a host died rather than a game. */}
-                    {a.lastSeenAt
-                      ? this.t(a.late ? 'host_late' : 'host_seen', { when: humanTime(a.lastSeenAt) })
-                      : this.t('host_never')}
+                    {a.lastSeenAt ? this.t(a.late ? 'host_late' : 'host_seen', { when: humanTime(a.lastSeenAt) }) : this.t('host_never')}
                     {a.version ? ` · ${a.version} · ${a.os}/${a.arch}` : ''}
                     {a.drivers && a.drivers.length ? ` · ${a.drivers.join(', ')}` : ''}
                   </span>
                 </div>
-                {Button.component(
-                  { className: 'Button Button--danger', onclick: () => this.unpair(a) },
-                  this.t('unpair')
-                )}
+                {Button.component({ className: 'Button Button--danger', onclick: () => this.unpair(a) }, this.t('unpair'))}
 
                 {/*
                   🚨 Per HOST, because that is what a template belongs to. An
@@ -291,10 +286,7 @@ export default class GarrisonPage extends ExtensionPage {
         {s.needsAttention ? (
           <div className="GarrisonAdmin-attention">
             <span>{this.t('attention')}</span>
-            {Button.component(
-              { className: 'Button', onclick: () => this.save(s, { clear_attention: true }) },
-              this.t('clear_attention')
-            )}
+            {Button.component({ className: 'Button', onclick: () => this.save(s, { clear_attention: true }) }, this.t('clear_attention'))}
           </div>
         ) : null}
 
@@ -314,7 +306,9 @@ export default class GarrisonPage extends ExtensionPage {
             min="0"
             max="720"
             value={s.backupEveryHours ?? 0}
-            oninput={(e) => { s.backupEveryHours = e.target.value; }}
+            oninput={(e) => {
+              s.backupEveryHours = e.target.value;
+            }}
             onblur={() => this.save(s, { backup_every_hours: s.backupEveryHours })}
           />
           <span className="GarrisonAdmin-meta">{this.t('backup_every_help')}</span>
@@ -339,14 +333,20 @@ export default class GarrisonPage extends ExtensionPage {
           {Switch.component(
             {
               state: s.isPublic,
-              onchange: (v) => { s.isPublic = v; this.save(s, { is_public: v }); },
+              onchange: (v) => {
+                s.isPublic = v;
+                this.save(s, { is_public: v });
+              },
             },
             this.t('public')
           )}
           {Switch.component(
             {
               state: s.autoRemediate,
-              onchange: (v) => { s.autoRemediate = v; this.save(s, { auto_remediate: v }); },
+              onchange: (v) => {
+                s.autoRemediate = v;
+                this.save(s, { auto_remediate: v });
+              },
             },
             this.t('auto_remediate')
           )}
@@ -354,9 +354,7 @@ export default class GarrisonPage extends ExtensionPage {
 
         <div className="GarrisonAdmin-icon">
           <div className="GarrisonAdmin-iconRow">
-            {s.iconUrl ? (
-              <img className="GarrisonAdmin-iconPreview" src={s.iconUrl} alt="" />
-            ) : null}
+            {s.iconUrl ? <img className="GarrisonAdmin-iconPreview" src={s.iconUrl} alt="" /> : null}
 
             <div className="GarrisonAdmin-iconActions">
               {/*
@@ -379,11 +377,7 @@ export default class GarrisonPage extends ExtensionPage {
 
               <label className="GarrisonAdmin-iconLabel">
                 <span>{this.t('icon')}</span>
-                <input
-                  type="file"
-                  accept="image/png,image/jpeg,image/gif,image/webp"
-                  onchange={(e) => this.uploadIcon(s, e.target.files[0])}
-                />
+                <input type="file" accept="image/png,image/jpeg,image/gif,image/webp" onchange={(e) => this.uploadIcon(s, e.target.files[0])} />
               </label>
             </div>
           </div>
@@ -404,7 +398,9 @@ export default class GarrisonPage extends ExtensionPage {
                 className="FormControl"
                 placeholder="https://…"
                 value={s.logoUrlDraft || ''}
-                oninput={(e) => { s.logoUrlDraft = e.target.value; }}
+                oninput={(e) => {
+                  s.logoUrlDraft = e.target.value;
+                }}
               />
               {Button.component(
                 {
@@ -418,9 +414,7 @@ export default class GarrisonPage extends ExtensionPage {
             </div>
           </div>
 
-          <span className="GarrisonAdmin-meta">
-            {s.canFetchLogo ? this.t('fetch_logo_help') : this.t('logo_url_help')}
-          </span>
+          <span className="GarrisonAdmin-meta">{s.canFetchLogo ? this.t('fetch_logo_help') : this.t('logo_url_help')}</span>
         </div>
       </div>
     );
@@ -436,7 +430,9 @@ export default class GarrisonPage extends ExtensionPage {
           id={id}
           className="FormControl"
           value={s[key] || ''}
-          oninput={(e) => { s[key] = e.target.value; }}
+          oninput={(e) => {
+            s[key] = e.target.value;
+          }}
           onblur={() => this.save(s, { [apiKey || key]: s[key] })}
         />
       </div>
@@ -515,9 +511,7 @@ export default class GarrisonPage extends ExtensionPage {
     // not expect to lose will assume something broke.
     if (!confirm(extract(this.t('unpair_confirm', { name: agent.name, count: agent.servers })))) return;
 
-    app
-      .request({ method: 'DELETE', url: app.forum.attribute('apiUrl') + '/garrison/admin/agents/' + agent.id })
-      .then(() => this.load());
+    app.request({ method: 'DELETE', url: app.forum.attribute('apiUrl') + '/garrison/admin/agents/' + agent.id }).then(() => this.load());
   }
 
   save(server, changes) {
@@ -583,4 +577,3 @@ export default class GarrisonPage extends ExtensionPage {
       });
   }
 }
-

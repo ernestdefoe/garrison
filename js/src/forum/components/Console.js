@@ -58,12 +58,7 @@ export default class Console extends Component {
   }
 
   fetch() {
-    const url =
-      app.forum.attribute('apiUrl') +
-      '/garrison/servers/' +
-      this.attrs.server.id +
-      '/console' +
-      (this.since ? '?since=' + this.since : '');
+    const url = app.forum.attribute('apiUrl') + '/garrison/servers/' + this.attrs.server.id + '/console' + (this.since ? '?since=' + this.since : '');
 
     return app
       .request({ method: 'GET', url })
@@ -114,9 +109,7 @@ export default class Console extends Component {
           {this.loading ? (
             <LoadingIndicator display="inline" size="small" />
           ) : this.lines.length === 0 ? (
-            <p className="GarrisonConsole-empty">
-              {app.translator.trans('ernestdefoe-garrison.forum.console_empty')}
-            </p>
+            <p className="GarrisonConsole-empty">{app.translator.trans('ernestdefoe-garrison.forum.console_empty')}</p>
           ) : (
             this.lines.map((l) => (
               <div className={'GarrisonConsole-line' + (l.stderr ? ' is-stderr' : '')} key={l.id}>

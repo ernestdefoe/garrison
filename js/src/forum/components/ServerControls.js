@@ -40,9 +40,7 @@ export default class ServerControls extends Component {
         {this.failed ? <span className="GarrisonControls-error">{this.failed}</span> : null}
 
         {/* No Start on something already up, and nothing at all mid-transition. */}
-        {!running && !busy
-          ? this.button('server.start', 'fas fa-play', 'start')
-          : null}
+        {!running && !busy ? this.button('server.start', 'fas fa-play', 'start') : null}
 
         {running && !busy ? this.button('server.restart', 'fas fa-rotate', 'restart') : null}
         {running && !busy ? this.button('server.stop', 'fas fa-stop', 'stop', true) : null}

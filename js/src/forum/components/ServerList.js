@@ -59,20 +59,14 @@ export default class ServerList extends Component {
     if (!servers.length) {
       return (
         <div className="GarrisonWidget GarrisonWidget--empty">
-          {app.translator.trans(
-            lastError()
-              ? 'ernestdefoe-garrison.forum.unreachable'
-              : 'ernestdefoe-garrison.forum.no_servers'
-          )}
+          {app.translator.trans(lastError() ? 'ernestdefoe-garrison.forum.unreachable' : 'ernestdefoe-garrison.forum.no_servers')}
         </div>
       );
     }
 
     return (
       <div className="GarrisonWidget">
-        <ul className="GarrisonWidget-list">
-          {servers.map((s) => this.row(s))}
-        </ul>
+        <ul className="GarrisonWidget-list">{servers.map((s) => this.row(s))}</ul>
       </div>
     );
   }
@@ -98,12 +92,7 @@ export default class ServerList extends Component {
      */
     return (
       <li className={'GarrisonServer' + (stale ? ' GarrisonServer--stale' : '')} key={s.id}>
-        <a
-          className="GarrisonServer-link"
-          href={app.route('garrison.server', { id: s.id })}
-          config={m.route.link}
-          title={s.name}
-        >
+        <a className="GarrisonServer-link" href={app.route('garrison.server', { id: s.id })} config={m.route.link} title={s.name}>
           {/*
             🚨 The dot, the mark and the name are ONE group that never breaks
             up. Left to wrap freely they took three lines in a narrow fof panel
@@ -112,10 +101,7 @@ export default class ServerList extends Component {
             second line.
           */}
           <span className="GarrisonServer-identity">
-            <span
-              className={`GarrisonServer-state GarrisonServer-state--${s.state}`}
-              aria-hidden="true"
-            />
+            <span className={`GarrisonServer-state GarrisonServer-state--${s.state}`} aria-hidden="true" />
             {serverMark(s, 18)}
             <span className="GarrisonServer-name">{s.name}</span>
           </span>
