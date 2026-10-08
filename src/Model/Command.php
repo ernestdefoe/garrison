@@ -4,6 +4,7 @@ namespace ErnestDefoe\Garrison\Model;
 
 use Flarum\Database\AbstractModel;
 use Flarum\User\User;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * One queued instruction, and its own audit record.
@@ -35,12 +36,14 @@ class Command extends AbstractModel
         'completed_at' => 'datetime',
     ];
 
-    public function actor()
+    /** @return BelongsTo<User, $this> */
+    public function actor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'actor_id');
     }
 
-    public function agent()
+    /** @return BelongsTo<GarrisonAgent, $this> */
+    public function agent(): BelongsTo
     {
         return $this->belongsTo(GarrisonAgent::class, 'agent_id');
     }

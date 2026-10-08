@@ -7,6 +7,9 @@ use ErnestDefoe\Garrison\Health\HealthText;
 use Flarum\Database\AbstractModel;
 use Flarum\Locale\TranslatorInterface;
 use Flarum\User\User;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * The forum's cached view of one game server.
@@ -85,7 +88,11 @@ class Server extends AbstractModel
      * better failure, but only if it never ships. `getTable()` also carries
      * the installation's table prefix, which a hand-written string would not.
      */
-    public function scopeEntitled($query)
+    /**
+     * @param Builder<$this> $query
+     * @return Builder<$this>
+     */
+    public function scopeEntitled(Builder $query): Builder
     {
         $ids = resolve(\ErnestDefoe\Garrison\Entitled::class)->serverIds();
 
@@ -125,7 +132,8 @@ class Server extends AbstractModel
         'updated_at' => 'datetime',
     ];
 
-    public function agent()
+    /** @return BelongsTo<GarrisonAgent, $this> */
+    public function agent(): BelongsTo
     {
         return $this->belongsTo(GarrisonAgent::class, 'agent_id');
     }
@@ -282,7 +290,8 @@ class Server extends AbstractModel
         return ! in_array(strtolower((string) $this->game), self::BROADCAST_ONLY_GAMES, true);
     }
 
-    public function sessions()
+    /** @return HasMany<PlaySession, $this> */
+    public function sessions(): HasMany
     {
         return $this->hasMany(PlaySession::class, 'server_id');
     }

@@ -16,6 +16,7 @@ use ErnestDefoe\Garrison\Console\PairCommand;
 use ErnestDefoe\Garrison\GarrisonServiceProvider;
 use ErnestDefoe\Garrison\Notification\ServerIncidentBlueprint;
 use Flarum\Extend;
+use Illuminate\Console\Scheduling\Event;
 
 $extenders = [
     (new Extend\ServiceProvider())->register(GarrisonServiceProvider::class),
@@ -66,7 +67,9 @@ $extenders = [
          * consecutive unready readings before acting already waits three
          * minutes; a five-minute schedule would make that fifteen.
          */
-        ->schedule(HealthCommand::class, fn ($event) => $event->everyMinute()->withoutOverlapping()),
+        ->schedule(HealthCommand::class, function (Event $event): void {
+            $event->everyMinute()->withoutOverlapping();
+        }),
 
     /*
      * 🚨 The agent's route is exempt from CSRF, through core's own extender.

@@ -4,6 +4,8 @@ namespace ErnestDefoe\Garrison\Model;
 
 use Carbon\Carbon;
 use Flarum\Database\AbstractModel;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * One stretch of time somebody spent in a game.
@@ -33,12 +35,17 @@ class PlaySession extends AbstractModel
         'ended_at' => 'datetime',
     ];
 
-    public function server()
+    /** @return BelongsTo<Server, $this> */
+    public function server(): BelongsTo
     {
         return $this->belongsTo(Server::class, 'server_id');
     }
 
-    public function scopeOpen($query)
+    /**
+     * @param Builder<$this> $query
+     * @return Builder<$this>
+     */
+    public function scopeOpen(Builder $query): Builder
     {
         return $query->whereNull('ended_at');
     }

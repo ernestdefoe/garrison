@@ -5,6 +5,8 @@ namespace ErnestDefoe\Garrison\Model;
 use Carbon\Carbon;
 use Flarum\Database\AbstractModel;
 use Flarum\User\User;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * A forum account and the in-game player it belongs to.
@@ -43,17 +45,23 @@ class Identity extends AbstractModel
      */
     protected $hidden = ['code_hash'];
 
-    public function user()
+    /** @return BelongsTo<User, $this> */
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
     }
 
-    public function server()
+    /** @return BelongsTo<Server, $this> */
+    public function server(): BelongsTo
     {
         return $this->belongsTo(Server::class, 'server_id');
     }
 
-    public function scopeVerified($query)
+    /**
+     * @param Builder<$this> $query
+     * @return Builder<$this>
+     */
+    public function scopeVerified(Builder $query): Builder
     {
         return $query->whereNotNull('verified_at');
     }

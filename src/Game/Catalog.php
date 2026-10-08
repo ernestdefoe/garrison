@@ -114,6 +114,8 @@ class Catalog
      * Kept deliberately short. A URL that 404s is worse than no entry at all:
      * it costs three attempts and then leaves the operator with the fallback
      * anyway, having looked like the feature failed.
+     *
+     * @var array<string, list<string>>
      */
     public const EXPLICIT = [
         // 🚨 Deliberately EMPTY, and that is a finding rather than an omission.
@@ -174,7 +176,7 @@ class Catalog
             $candidates[] = $base . 'header.jpg';
         }
 
-        foreach (self::EXPLICIT[$key] ?? [] as $url) {
+        foreach (static::EXPLICIT[$key] ?? [] as $url) {
             $candidates[] = $url;
         }
 

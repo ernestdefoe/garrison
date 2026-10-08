@@ -4,6 +4,7 @@ namespace ErnestDefoe\Garrison\Model;
 
 use Carbon\Carbon;
 use Flarum\Database\AbstractModel;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * A paired game host.
@@ -34,7 +35,8 @@ class GarrisonAgent extends AbstractModel
         'updated_at' => 'datetime',
     ];
 
-    public function servers()
+    /** @return HasMany<Server, $this> */
+    public function servers(): HasMany
     {
         return $this->hasMany(Server::class, 'agent_id');
     }

@@ -4,6 +4,7 @@ namespace ErnestDefoe\Garrison\Model;
 
 use Carbon\Carbon;
 use Flarum\Database\AbstractModel;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * One episode of a server being unhealthy, and what was done about it.
@@ -33,7 +34,8 @@ class Incident extends AbstractModel
         'resolved_at' => 'datetime',
     ];
 
-    public function server()
+    /** @return BelongsTo<Server, $this> */
+    public function server(): BelongsTo
     {
         return $this->belongsTo(Server::class, 'server_id');
     }

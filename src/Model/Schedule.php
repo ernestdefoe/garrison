@@ -4,6 +4,7 @@ namespace ErnestDefoe\Garrison\Model;
 
 use Carbon\Carbon;
 use Flarum\Database\AbstractModel;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * One piece of scheduled work against one server.
@@ -50,7 +51,8 @@ class Schedule extends AbstractModel
 
     public const KINDS = ['restart', 'backup', 'console'];
 
-    public function server()
+    /** @return BelongsTo<Server, $this> */
+    public function server(): BelongsTo
     {
         return $this->belongsTo(Server::class, 'server_id');
     }
