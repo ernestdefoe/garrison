@@ -1,6 +1,7 @@
 import app from 'flarum/admin/app';
 
 import drainAdminQueue from './slots';
+import { registerEditorWidgets } from '../common/fofWidgets';
 
 /*
  * 🚨 `export { default as extend }`, NOT `export * from './extend'`.
@@ -25,4 +26,9 @@ app.initializers.add('ernestdefoe-garrison', () => {
    * and whichever side runs second drains.
    */
   drainAdminQueue();
+
+  // FoF's layout editor lists only widgets the admin registers too.
+  registerEditorWidgets(app, 'ernestdefoe-garrison', [
+    { key: 'garrisonServers', icon: 'fas fa-tower-observation', title: () => app.translator.trans('ernestdefoe-garrison.admin.widgets.servers') },
+  ]);
 });

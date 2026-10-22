@@ -106,7 +106,9 @@ annotated.
 Separately from the pages above — which need nothing — Garrison offers a compact
 server-status widget to Flarum's own sidebar, [fof/forum-widgets-core],
 [Bespoke] and [Page Builder]. The stock sidebar is built in and needs no extra
-extension; the other three are picked up only if you already run them.
+extension; the other three are picked up only if you already run them. With
+FoF Forum Widgets, drag **Game servers** into a section of its layout editor and
+save; until then the stock sidebar carries it.
 
 ![The sidebar widget](screenshots/widget.png)
 

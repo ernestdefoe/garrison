@@ -1,3 +1,5 @@
+import { fof, hasFofWidgets, placed } from '../common/fofWidgets';
+
 /**
  * The widget-host adapters.
  *
@@ -49,19 +51,15 @@ export default function registerWidgetHosts(app, makeContent) {
  * (older) thing and the name everybody reaches for first.
  */
 function registerFofWidget(app, makeContent) {
-  const flarum = flarumGlobal();
+  if (!hasFofWidgets()) return false;
 
-  if (!flarum?.extensions || !('fof-forum-widgets-core' in flarum.extensions)) return false;
-
-  const widgetsMod = flarum.reg?.get?.('fof-forum-widgets-core', 'common/extend/Widgets');
-  const widgetMod = flarum.reg?.get?.('fof-forum-widgets-core', 'common/components/Widget');
-  const Widgets = widgetsMod?.default ?? widgetsMod;
-  const WidgetBase = widgetMod?.default ?? widgetMod;
+  const Widgets = fof('common/extend/Widgets');
+  const WidgetBase = fof('common/components/Widget');
 
   // Present but not resolvable means a version whose internals moved. Decline
   // quietly and let the stock sidebar carry it, rather than throwing out of an
   // initializer and taking the forum's JS down.
-  if (!Widgets || !WidgetBase) return false;
+  if (!Widgets || !WidgetBase || !app.widgets) return false;
 
   class GarrisonServersWidget extends WidgetBase {
     className() {
@@ -85,7 +83,9 @@ function registerFofWidget(app, makeContent) {
     .add({
       key: 'garrisonServers',
       component: GarrisonServersWidget,
-      isDisabled: false,
+      // 🚨 Opt-in: shown only where the admin placed it in FoF's layout editor
+      // (see common/fofWidgets.js). Until then the stock sidebar carries it.
+      isDisabled: () => !placed(app, 'ernestdefoe-garrison', 'garrisonServers'),
       isUnique: true,
       placement: 'end',
       position: 1,
